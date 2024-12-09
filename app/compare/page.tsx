@@ -259,7 +259,7 @@ export default function ComparePage() {
                           let lines: string[] = [];
                           let currentLine = '';
                           
-                          words.forEach(word => {
+                          words.forEach((word: string) => {
                             const testLine = currentLine ? `${currentLine} ${word}` : word;
                             if (testLine.length * 6 < maxWidth) { // Approximate character width
                               currentLine = testLine;
@@ -351,7 +351,7 @@ export default function ComparePage() {
                           const lines = [];
                           let currentLine = '';
                           
-                          words.forEach(word => {
+                          words.forEach((word: string) => {
                             const testLine = currentLine ? `${currentLine} ${word}` : word;
                             if (testLine.length < 30) { // Adjust this value to control line length
                               currentLine = testLine;
@@ -387,7 +387,7 @@ export default function ComparePage() {
                           const lines = [];
                           let currentLine = '';
                           
-                          words.forEach(word => {
+                          words.forEach((word: string) => {
                             const testLine = currentLine ? `${currentLine} ${word}` : word;
                             if (testLine.length < 40) { // Adjust this value for legend width
                               currentLine = testLine;

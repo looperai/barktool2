@@ -114,7 +114,7 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
       cellEditorParams: {
         values: materials.map(m => m.iceDbName)
       },
-      suppressClickEdit: true,
+      singleClickEdit: false,
       onCellClicked: (params: any) => {
         params.api.startEditingCell({
           rowIndex: params.rowIndex,
