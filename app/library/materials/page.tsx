@@ -6,7 +6,7 @@ import { materials } from "@/lib/database"
 import { AgGridReact } from 'ag-grid-react'
 import { ColDef, GridApi } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-material.css'
+import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { useSearchParams } from 'next/navigation'
 
 interface Material {
@@ -97,7 +97,7 @@ export default function MaterialsPage() {
         />
       </div>
 
-      <div className="flex-1 ag-theme-material w-full h-[calc(100vh-8rem)]">
+      <div className="flex-1 ag-theme-alpine w-full h-[calc(100vh-8rem)]">
         <AgGridReact
           ref={gridRef}
           rowData={filteredMaterials}

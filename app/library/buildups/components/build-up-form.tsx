@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { AgGridReact } from 'ag-grid-react'
 import { ColDef } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-material.css'
+import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -114,6 +114,13 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
       cellEditorParams: {
         values: materials.map(m => m.iceDbName)
       },
+      suppressClickEdit: true,
+      onCellClicked: (params: any) => {
+        params.api.startEditingCell({
+          rowIndex: params.rowIndex,
+          colKey: params.column.getColId()
+        });
+      },
       onCellValueChanged: (params: any) => {
         const material = materials.find(m => m.iceDbName === params.newValue)
         if (material && params.data.thickness) {
@@ -213,7 +220,7 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
         </div>
       </div>
 
-      <div className="h-[calc(100vh-20rem)] ag-theme-material">
+      <div className="h-[calc(100vh-20rem)] ag-theme-alpine">
         <AddRowHeader onAddRow={addNewRow} />
         <div className="h-[calc(100%-40px)]">
           <AgGridReact
@@ -226,8 +233,10 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
               resizable: true,
               wrapHeaderText: true,
               autoHeaderHeight: true,
-              autoHeight: true
+              autoHeight: true,
+              singleClickEdit: true
             }}
+            stopEditingWhenCellsLoseFocus={true}
             domLayout="normal"
             rowHeight={undefined}
             noRowsOverlayComponent={() => (

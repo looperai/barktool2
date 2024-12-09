@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -9,17 +9,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { materials } from "@/lib/database"
 import { SavedBuildUp } from "../library/buildups/types"
 import {
-  BarChart,
   Bar,
+  BarChart,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
   Pie,
+  PieChart,
   Cell,
+  Legend,
 } from "recharts"
 
 interface CompareItem {
@@ -29,15 +28,35 @@ interface CompareItem {
   ecfBiogenic: number
 }
 
-// Modern, aesthetically pleasing color palette
+// Modern color palette with distinct colors
 const COLORS = [
-  '#6366f1', // Primary blue/indigo
-  '#ec4899', // Pink
-  '#8b5cf6', // Purple
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#06b6d4', // Cyan
+  "hsl(221, 83%, 53%)", // blue-600
+  "hsl(292, 91%, 73%)", // pink-300
+  "hsl(262, 83%, 58%)", // purple-600
+  "hsl(144, 61%, 52%)", // emerald-500
+  "hsl(43, 96%, 56%)",  // amber-400
+  "hsl(172, 66%, 50%)", // teal-400
 ]
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-foreground">
+            {label}
+          </span>
+          {payload.map((item: any, index: number) => (
+            <span key={index} className="text-sm text-foreground">
+              {item.name}: {item.value.toFixed(4)} kgCO2e/kg
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
 
 export default function ComparePage() {
   const [type, setType] = useState<"materials" | "buildups">("materials")
@@ -45,11 +64,25 @@ export default function ComparePage() {
   const [searchValue, setSearchValue] = useState("")
   const [selectedItems, setSelectedItems] = useState<CompareItem[]>([])
   const [buildUps, setBuildUps] = useState<SavedBuildUp[]>([])
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Load build-ups from localStorage
     const savedBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
     setBuildUps(savedBuildUps)
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [])
 
   // Get available options based on selected type
@@ -90,7 +123,7 @@ export default function ComparePage() {
 
   return (
     <div className="flex flex-col h-full p-8">
-      <div className="max-w-3xl mx-auto w-full space-y-8">
+      <div className="max-w-4xl mx-auto w-full space-y-8">
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold tracking-tight">Compare</h2>
           <p className="text-muted-foreground">
@@ -126,7 +159,7 @@ export default function ComparePage() {
           </div>
         </RadioGroup>
 
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Input
@@ -199,60 +232,188 @@ export default function ComparePage() {
 
         {selectedItems.length > 0 && (
           <div className="space-y-8">
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border bg-card text-card-foreground">
               <div className="p-6">
-                <h3 className="font-semibold mb-4">Embodied Carbon Comparison</h3>
-                <div className="h-[400px]">
+                <h3 className="text-lg font-semibold mb-4">Embodied Carbon Comparison</h3>
+                <div className="h-[500px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
+                    <BarChart 
                       data={barChartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 70,
-                      }}
+                      margin={{ top: 20, right: 30, left: 40, bottom: 120 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
+                        stroke="hsl(var(--foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
                         angle={-45}
                         textAnchor="end"
-                        height={70}
+                        height={120}
                         interval={0}
+                        tick={(props) => {
+                          const { x, y, payload } = props;
+                          const words = payload.value.split(' ');
+                          const lineHeight = 12;
+                          const maxWidth = 150; // Maximum width for wrapped text
+                          let lines: string[] = [];
+                          let currentLine = '';
+                          
+                          words.forEach(word => {
+                            const testLine = currentLine ? `${currentLine} ${word}` : word;
+                            if (testLine.length * 6 < maxWidth) { // Approximate character width
+                              currentLine = testLine;
+                            } else {
+                              lines.push(currentLine);
+                              currentLine = word;
+                            }
+                          });
+                          if (currentLine) {
+                            lines.push(currentLine);
+                          }
+
+                          return (
+                            <g transform={`translate(${x},${y})`}>
+                              {lines.map((line, i) => (
+                                <text
+                                  key={i}
+                                  x={0}
+                                  y={0}
+                                  dy={i * lineHeight}
+                                  textAnchor="end"
+                                  fill="hsl(var(--foreground))"
+                                  fontSize={12}
+                                  transform="rotate(-45)"
+                                >
+                                  {line}
+                                </text>
+                              ))}
+                            </g>
+                          );
+                        }}
                       />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="ECF inc biogenic" fill={COLORS[0]} />
-                      <Bar dataKey="ECF biogenic" fill={COLORS[1]} />
+                      <YAxis
+                        stroke="hsl(var(--foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value.toFixed(4)}`}
+                        label={{ 
+                          value: 'kgCO2e/kg',
+                          angle: -90,
+                          position: 'insideLeft',
+                          offset: -20,
+                          style: { fill: 'hsl(var(--foreground))' }
+                        }}
+                      />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
+                      />
+                      <Legend 
+                        verticalAlign="top"
+                        height={36}
+                        formatter={(value) => (
+                          <span className="text-sm text-foreground">{value}</span>
+                        )}
+                      />
+                      <Bar
+                        name="ECF inc biogenic"
+                        dataKey="ECF inc biogenic"
+                        fill={COLORS[0]}
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        name="ECF biogenic"
+                        dataKey="ECF biogenic"
+                        fill={COLORS[1]}
+                        radius={[4, 4, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border bg-card">
+            <div className="rounded-xl border bg-card text-card-foreground">
               <div className="p-6">
-                <h3 className="font-semibold mb-4">ECF inc biogenic Distribution</h3>
-                <div className="h-[400px]">
+                <h3 className="text-lg font-semibold mb-4">ECF inc biogenic Distribution</h3>
+                <div className="h-[500px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieChartData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        outerRadius={150}
-                        fill="#8884d8"
+                        labelLine={true}
+                        label={({ name, value }) => {
+                          const words = name.split(' ');
+                          const lines = [];
+                          let currentLine = '';
+                          
+                          words.forEach(word => {
+                            const testLine = currentLine ? `${currentLine} ${word}` : word;
+                            if (testLine.length < 30) { // Adjust this value to control line length
+                              currentLine = testLine;
+                            } else {
+                              lines.push(currentLine);
+                              currentLine = word;
+                            }
+                          });
+                          if (currentLine) {
+                            lines.push(currentLine);
+                          }
+                          lines.push(`(${value.toFixed(4)})`);
+                          
+                          return lines.join('\n');
+                        }}
+                        outerRadius={180}
+                        fill={COLORS[0]}
                         dataKey="value"
                       >
                         {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={COLORS[index % COLORS.length]}
+                            className="stroke-background hover:opacity-80"
+                          />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend 
+                        formatter={(value) => {
+                          // Wrap legend text
+                          const words = value.split(' ');
+                          const lines = [];
+                          let currentLine = '';
+                          
+                          words.forEach(word => {
+                            const testLine = currentLine ? `${currentLine} ${word}` : word;
+                            if (testLine.length < 40) { // Adjust this value for legend width
+                              currentLine = testLine;
+                            } else {
+                              lines.push(currentLine);
+                              currentLine = word;
+                            }
+                          });
+                          if (currentLine) {
+                            lines.push(currentLine);
+                          }
+                          
+                          return (
+                            <span className="text-sm text-foreground">
+                              {lines.map((line, i) => (
+                                <tspan key={i} x="0" dy={i ? "1.2em" : 0}>
+                                  {line}
+                                </tspan>
+                              ))}
+                            </span>
+                          );
+                        }}
+                        wrapperStyle={{
+                          paddingTop: '20px'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
