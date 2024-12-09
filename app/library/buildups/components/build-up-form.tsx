@@ -10,26 +10,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
-
-interface BuildUpItem {
-  id: string;
-  itemName: string;
-  material: string;
-  thickness: number;
-  mass: number;
-  a1a3IncBiogenic: number;
-  a1a3Biogenic: number;
-}
-
-export interface SavedBuildUp {
-  id: string;
-  name: string;
-  totalThickness: number;
-  totalMass: number;
-  totalA1A3IncBiogenic: number;
-  totalA1A3Biogenic: number;
-  items: BuildUpItem[];
-}
+import { BuildUpItem, SavedBuildUp } from "../types"
 
 function AddRowHeader(props: { onAddRow: () => void }) {
   return (

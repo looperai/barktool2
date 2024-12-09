@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { materials } from "@/lib/database"
-import { SavedBuildUp } from "../library/buildups/create/page"
+import { SavedBuildUp } from "../library/buildups/types"
 import {
   BarChart,
   Bar,
