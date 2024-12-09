@@ -21,7 +21,7 @@ interface BuildUpItem {
   a1a3Biogenic: number;
 }
 
-export interface SavedBuildUp {
+interface SavedBuildUp {
   id: string;
   name: string;
   totalThickness: number;
@@ -47,12 +47,12 @@ function AddRowHeader(props: { onAddRow: () => void }) {
   )
 }
 
-interface CreateBuildUpPageProps {
+interface PageProps {
   initialData?: SavedBuildUp | null
   isEditing?: boolean
 }
 
-export function CreateBuildUpPage({ initialData, isEditing }: CreateBuildUpPageProps) {
+export default function Page({ initialData, isEditing }: PageProps) {
   const router = useRouter()
   const [buildUpName, setBuildUpName] = useState(initialData?.name || "")
   const [buildUpItems, setBuildUpItems] = useState<BuildUpItem[]>(initialData?.items || [])
@@ -265,9 +265,4 @@ export function CreateBuildUpPage({ initialData, isEditing }: CreateBuildUpPageP
       </div>
     </div>
   )
-}
-
-// Rename the main component and export it as default
-export default function Page() {
-  return <CreateBuildUpPage />
 } 
