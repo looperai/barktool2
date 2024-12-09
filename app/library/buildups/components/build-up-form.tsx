@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { AgGridReact } from 'ag-grid-react'
 import { ColDef } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-alpine.css'
+import 'ag-grid-community/styles/ag-theme-material.css'
 import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -213,11 +213,11 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
         </div>
       </div>
 
-      <div className="h-[calc(100vh-20rem)] ag-theme-alpine">
+      <div className="h-[calc(100vh-20rem)] ag-theme-material">
         <AddRowHeader onAddRow={addNewRow} />
         <div className="h-[calc(100%-40px)]">
           <AgGridReact
-            key={initialData?.id || 'new'} // Force grid re-creation when switching between edit/create
+            key={initialData?.id || 'new'}
             rowData={buildUpItems}
             columnDefs={columnDefs}
             defaultColDef={{
@@ -225,9 +225,11 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
               minWidth: 150,
               resizable: true,
               wrapHeaderText: true,
-              autoHeaderHeight: true
+              autoHeaderHeight: true,
+              autoHeight: true
             }}
             domLayout="normal"
+            rowHeight={undefined}
             noRowsOverlayComponent={() => (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground italic">
