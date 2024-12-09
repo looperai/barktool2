@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AgGridReact } from 'ag-grid-react'
@@ -9,7 +9,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 interface BuildUpItem {
   id: string;
@@ -267,5 +267,7 @@ export function CreateBuildUpPage({ initialData, isEditing }: CreateBuildUpPageP
   )
 }
 
-// Add default export
-export default CreateBuildUpPage; 
+// Rename the main component and export it as default
+export default function Page() {
+  return <CreateBuildUpPage />
+} 
