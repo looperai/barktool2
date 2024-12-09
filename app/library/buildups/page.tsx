@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams, usePathname } from 'next/navigation'
-import { CreateBuildUpPage } from "./create/page"
+import { BuildUpComponent } from "./create/page"
 
 export default function BuildUpsPage() {
   const searchParams = useSearchParams()
@@ -15,7 +15,7 @@ export default function BuildUpsPage() {
 
   return (
     <div className="h-full">
-      <CreateBuildUpPage 
+      <BuildUpComponent 
         key={buildUpId || 'new'} 
         initialData={selectedBuildUp}
         isEditing={!!buildUpId && !isCreating}
