@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { SavedBuildUp } from "@/app/library/buildups/create/page"
+import { SavedBuildUp } from "@/app/library/buildups/types"
 import { ErrorBoundary } from './error-boundary'
 
 export function DetailPanel() {
