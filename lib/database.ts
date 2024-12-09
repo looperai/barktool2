@@ -2,20 +2,20 @@ export interface Material {
   uniqueId: string;
   material: string;
   iceDbName: string;
-  density: string;
-  ecfIncBiogenic: string;
-  ecfBiogenic: string;
+  density: number;
+  ecfIncBiogenic: number;
+  ecfBiogenic: number;
   a4Default: string;
-  lifespan: string;
-  wasteRate: string;
-  eolReuse: string;
-  eolRecycle: string;
-  eolIncineration: string;
-  eolLandfill: string;
-  c3: string;
-  c4: string;
-  d1: string;
-  thermalConductivity: string;
+  lifespan: number;
+  wasteRate: number;
+  eolReuse: number;
+  eolRecycle: number;
+  eolIncineration: number;
+  eolLandfill: number;
+  c3: string | null;
+  c4: string | null;
+  d1: string | null;
+  thermalConductivity: number;
 }
 
 export const materials: Material[] = [
@@ -362,7 +362,7 @@ export const materials: Material[] = [
     thermalConductivity: 237.0
   },
   {
-    uniqueId: "83145d5f-0190-4e79-8268-55261527f1be",
+    uniqueId: "83145d5f-190-4e79-8268-55261527f1be",
     material: "Aluminium",
     iceDbName: "Aluminium extruded profile, Worldwide",
     density: 2750.0,
@@ -2091,7 +2091,7 @@ export const materials: Material[] = [
     thermalConductivity: 0.6
   },
   {
-    uniqueId: "fa43cb61-0533-4002-9d9a-60f73992ba45",
+    uniqueId: "fa43cb61-533-4002-9d9a-60f73992ba45",
     material: "Clay",
     iceDbName: "wall, clay brick, double skin, 215 mm with Mortar 1:5 cement:sand mix (Using CEM I cement)",
     density: 1970.0,
@@ -4238,7 +4238,7 @@ export const materials: Material[] = [
     thermalConductivity: 1.7
   },
   {
-    uniqueId: "1516db56-0862-4553-aa97-94d4655fb656",
+    uniqueId: "1516db56-862-4553-aa97-94d4655fb656",
     material: "Concrete",
     iceDbName: "Concrete PAV2 with 35% natural pozzolanic ash cement",
     density: 2380.0,
@@ -6537,7 +6537,7 @@ export const materials: Material[] = [
     thermalConductivity: 1.7
   },
   {
-    uniqueId: "7efe1c29-0800-4646-b62c-dc5ec6a80eeb",
+    uniqueId: "7efe1c29-800-4646-b62c-dc5ec6a80eeb",
     material: "Concrete",
     iceDbName: "Concrete - average UK cement replacement rate - with total cementitious content of 160 kg per m3 of concrete",
     density: 2380.0,
@@ -6670,7 +6670,7 @@ export const materials: Material[] = [
     thermalConductivity: 1.7
   },
   {
-    uniqueId: "d4161b8e-0017-4d87-af20-3ef4e9dcffc1",
+    uniqueId: "d4161b8e-17-4d87-af20-3ef4e9dcffc1",
     material: "Concrete",
     iceDbName: "Concrete - average UK cement replacement rate - with total cementitious content of 300 kg per m3 of concrete",
     density: 2380.0,
@@ -8228,7 +8228,7 @@ export const materials: Material[] = [
     thermalConductivity: 0.9
   },
   {
-    uniqueId: "191509b3-0476-4086-bf8c-669988a594e7",
+    uniqueId: "191509b3-476-4086-bf8c-669988a594e7",
     material: "Glass",
     iceDbName: "Double glazed unit, per mm glass, 1 mm of glass, ex cavity and ex frame",
     density: 2500.0,
@@ -8418,7 +8418,7 @@ export const materials: Material[] = [
     thermalConductivity: 0.9
   },
   {
-    uniqueId: "b22818b7-0186-4054-97fb-850e62924e9c",
+    uniqueId: "b22818b7-186-4054-97fb-850e62924e9c",
     material: "Glass",
     iceDbName: "Triple glazed unit, 18 mm of glass, ex cavity and ex frame",
     density: 2500.0,
@@ -8551,7 +8551,7 @@ export const materials: Material[] = [
     thermalConductivity: 0.9
   },
   {
-    uniqueId: "bcc80ed7-0582-4546-b58f-398011955879",
+    uniqueId: "bcc80ed7-582-4546-b58f-398011955879",
     material: "Glass",
     iceDbName: "Multi layer safety, filled core, fire resistant, toughened, 16 mm of glass, ex frame",
     density: 2500.0,
