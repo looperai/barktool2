@@ -11,6 +11,7 @@ import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BuildUpItem, SavedBuildUp } from "../types"
+import { MaterialCellEditor } from "./material-cell-editor"
 
 function AddRowHeader(props: { onAddRow: () => void }) {
   return (
@@ -110,11 +111,7 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
       field: 'material', 
       headerName: 'Material',
       editable: true,
-      cellEditor: 'agSelectCellEditor',
-      cellEditorParams: {
-        values: materials.map(m => m.iceDbName)
-      },
-      singleClickEdit: false,
+      cellEditor: MaterialCellEditor,
       onCellClicked: (params: any) => {
         params.api.startEditingCell({
           rowIndex: params.rowIndex,
