@@ -189,6 +189,10 @@ export function DetailPanel() {
       </Dialog>
 
       <div className="h-full flex flex-col">
+        <div className="flex items-center gap-2 mb-6 pb-4 border-b px-6 pt-6">
+          <span className="text-lg font-semibold">Library</span>
+        </div>
+
         <Tabs 
           defaultValue={currentTab} 
           value={currentTab} 
