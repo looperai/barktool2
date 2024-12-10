@@ -44,7 +44,7 @@ export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, re
     console.log('Selected material:', currentValue);
     setValue(currentValue);
     if (props.api) {
-      const node = props.api.getRowNode(props.rowIndex);
+      const node = props.api.getRowNode(String(props.rowIndex));
       if (node) {
         node.setDataValue(props.column.getColId(), currentValue);
       }
