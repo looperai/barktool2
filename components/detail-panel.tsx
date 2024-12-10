@@ -189,7 +189,7 @@ export function DetailPanel() {
       </Dialog>
 
       <div className="h-full flex flex-col">
-        <div className="flex items-center gap-2 mb-6 pb-4 border-b px-6 pt-6">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b px-6 pt-6">
           <span className="text-lg font-semibold">Library</span>
         </div>
 
@@ -199,21 +199,31 @@ export function DetailPanel() {
           onValueChange={handleTabChange} 
           className="h-full flex flex-col"
         >
-          <div className="border-b shrink-0">
-            <TabsList className="w-full">
-              <TabsTrigger value="materials" className="flex-1">Materials</TabsTrigger>
-              <TabsTrigger value="buildups" className="flex-1">Build-ups</TabsTrigger>
+          <div className="px-6">
+            <TabsList className="w-full grid grid-cols-2 h-9 bg-muted/50">
+              <TabsTrigger 
+                value="materials" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
+              >
+                Materials
+              </TabsTrigger>
+              <TabsTrigger 
+                value="buildups"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
+              >
+                Build-ups
+              </TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 mt-4">
             <ErrorBoundary>
               <TabsContent 
                 value="materials" 
-                className="h-full flex flex-col data-[state=inactive]:hidden"
+                className="h-full flex flex-col data-[state=inactive]:hidden m-0"
                 forceMount
               >
-                <div className="p-4 border-b shrink-0">
+                <div className="px-6 pb-4">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -225,8 +235,8 @@ export function DetailPanel() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
-                  <div className="space-y-2 p-4">
+                <div className="flex-1 overflow-y-auto px-6">
+                  <div className="space-y-2">
                     {filteredMaterials.map((material) => (
                       <div
                         key={material.uniqueId}
@@ -270,10 +280,10 @@ export function DetailPanel() {
 
               <TabsContent 
                 value="buildups" 
-                className="h-full flex flex-col data-[state=inactive]:hidden"
+                className="h-full flex flex-col data-[state=inactive]:hidden m-0"
                 forceMount
               >
-                <div className="p-4 border-b shrink-0">
+                <div className="px-6 pb-4">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -285,8 +295,8 @@ export function DetailPanel() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto px-6">
+                  <div className="space-y-4">
                     <Button 
                       onClick={handleCreateBuildUp} 
                       className="w-full"
