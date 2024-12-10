@@ -11,6 +11,7 @@ import { materials } from "@/lib/database"
 import { Trash2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BuildUpItem, SavedBuildUp } from "../types"
+import { MaterialCellEditor } from "./material-cell-editor"
 
 function AddRowHeader(props: { onAddRow: () => void }) {
   return (
@@ -104,23 +105,27 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
     { 
       field: 'itemName', 
       headerName: 'Item Name',
-      editable: true
+      editable: true,
+      tooltipField: 'itemName'
     },
     { 
       field: 'material', 
       headerName: 'Material',
       editable: true,
-      cellEditor: 'agSelectCellEditor',
+      cellRenderer: (params: any) => {
+        return (
+          <div className="truncate" title={params.value}>
+            {params.value || "Click to select material"}
+          </div>
+        )
+      },
+      cellEditor: MaterialCellEditor,
+      cellEditorPopup: true,
+      singleClickEdit: true,
       cellEditorParams: {
-        values: materials.map(m => m.iceDbName)
+        materials: materials
       },
-      singleClickEdit: false,
-      onCellClicked: (params: any) => {
-        params.api.startEditingCell({
-          rowIndex: params.rowIndex,
-          colKey: params.column.getColId()
-        });
-      },
+      tooltipField: 'material',
       onCellValueChanged: (params: any) => {
         const material = materials.find(m => m.iceDbName === params.newValue)
         if (material && params.data.thickness) {
