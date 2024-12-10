@@ -13,22 +13,6 @@ import { useRouter } from "next/navigation"
 import { BuildUpItem, SavedBuildUp } from "../types"
 import { MaterialCellEditor } from "./material-cell-editor"
 
-function AddRowHeader(props: { onAddRow: () => void }) {
-  return (
-    <div className="flex items-center justify-between px-4 py-2 border-b">
-      <Button 
-        variant="outline" 
-        size="sm"
-        onClick={props.onAddRow}
-        className="h-8"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Add new row
-      </Button>
-    </div>
-  )
-}
-
 interface BuildUpFormProps {
   initialData?: SavedBuildUp | null
   isEditing?: boolean
@@ -225,9 +209,19 @@ export function BuildUpForm({ initialData, isEditing }: BuildUpFormProps) {
         </div>
       </div>
 
-      <div className="h-[calc(100vh-20rem)] ag-theme-alpine">
-        <AddRowHeader onAddRow={addNewRow} />
-        <div className="h-[calc(100%-40px)]">
+      <div className="flex justify-start mb-4">
+        <Button 
+          variant="outline" 
+          onClick={addNewRow}
+          className="h-8"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add new row
+        </Button>
+      </div>
+
+      <div className="h-[calc(100vh-24rem)] ag-theme-alpine">
+        <div className="h-full">
           <AgGridReact
             key={initialData?.id || 'new'}
             rowData={buildUpItems}

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { materials } from '@/lib/database'
-import { Search, Plus, Trash2 } from 'lucide-react'
+import { Search, Plus, Trash2, Copy } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -123,6 +123,28 @@ export function DetailPanel() {
   const handleMaterialClick = (material: any) => {
     // Navigate to materials page with the selected material
     router.push(`/library/materials?material=${encodeURIComponent(material.iceDbName)}`)
+  }
+
+  const handleDuplicateBuildUp = (buildUp: SavedBuildUp) => {
+    if (!mounted) return
+
+    // Create a new build-up with copied data
+    const newBuildUp: SavedBuildUp = {
+      ...buildUp,
+      id: Math.random().toString(),
+      name: `Copy of ${buildUp.name}`,
+    }
+
+    // Add to localStorage
+    const savedBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
+    const updatedBuildUps = [...savedBuildUps, newBuildUp]
+    localStorage.setItem('buildUps', JSON.stringify(updatedBuildUps))
+    
+    // Update state
+    setBuildUps(updatedBuildUps)
+
+    // Navigate to the new build-up
+    router.push(`/library/buildups?id=${newBuildUp.id}`)
   }
 
   const filteredMaterials = materials.filter(material =>
@@ -283,17 +305,47 @@ export function DetailPanel() {
                           `}
                           onClick={() => handleSelectBuildUp(buildUp)}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setBuildUpToDelete(buildUp)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDuplicateBuildUp(buildUp)
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Duplicate</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setBuildUpToDelete(buildUp)
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delete</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <div className="text-sm font-medium">
                             {buildUp.name}
                           </div>
