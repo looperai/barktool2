@@ -55,32 +55,12 @@ export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, re
   }
 
   useEffect(() => {
-    if (containerRef.current) {
-      const cell = props.eGridCell as HTMLElement;
-      const cellRect = cell.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      
-      // Find the AG-Grid container
-      const gridContainer = cell.closest('.ag-theme-alpine');
-      if (!gridContainer) return;
-      
-      const gridRect = gridContainer.getBoundingClientRect();
-      const spaceBelow = gridRect.bottom - cellRect.bottom - 20; // 20px buffer from grid bottom
-      const spaceAbove = cellRect.top - gridRect.top - 20; // 20px buffer from grid top
-      
-      // If space below is less than 200px and space above is greater,
-      // position the dropdown above the cell
-      if (spaceBelow < 200 && spaceAbove > spaceBelow) {
-        containerRef.current.style.top = 'auto';
-        containerRef.current.style.bottom = '0';
-        setMaxHeight(spaceAbove);
-      } else {
-        containerRef.current.style.top = '0';
-        containerRef.current.style.bottom = 'auto';
-        setMaxHeight(spaceBelow);
-      }
+    if (props.eGridCell) {
+      const rect = props.eGridCell.getBoundingClientRect()
+      const maxHeight = window.innerHeight - rect.bottom - 20
+      setMaxHeight(maxHeight)
     }
-  }, [])
+  }, [props.eGridCell])
 
   return (
     <div 

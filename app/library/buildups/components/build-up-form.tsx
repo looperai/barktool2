@@ -26,6 +26,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import { BuildUpChart } from "./build-up-chart"
 
 interface BuildUpFormProps {
   initialData?: SavedBuildUp | null
@@ -39,6 +41,7 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
   const [buildUpItems, setBuildUpItems] = useState<BuildUpItem[]>(initialData?.items || [])
   const [isEditing, setIsEditing] = useState(defaultIsEditing || false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [toggledItems, setToggledItems] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setBuildUpName(initialData?.name || "")
@@ -146,6 +149,33 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
 
   // Column definitions for the build-up items grid
   const columnDefs: ColDef<BuildUpItem>[] = [
+    {
+      field: 'toggle',
+      headerName: 'Toggle',
+      width: 30,
+      cellRenderer: (params: any) => {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <button
+              className={cn(
+                "w-4 h-4 rounded-full border transition-colors",
+                toggledItems.has(params.data.id) ? "bg-primary border-primary" : "bg-background"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                const newToggledItems = new Set(toggledItems);
+                if (newToggledItems.has(params.data.id)) {
+                  newToggledItems.delete(params.data.id);
+                } else {
+                  newToggledItems.add(params.data.id);
+                }
+                setToggledItems(newToggledItems);
+              }}
+            />
+          </div>
+        )
+      }
+    },
     { 
       field: 'itemName', 
       headerName: 'Item Name',
@@ -407,23 +437,29 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         </div>
       </div>
 
-      <div className="space-y-4 mb-8">
-        <div className="flex items-center gap-2">
-          <div className="w-48">
-            <label className="text-sm text-muted-foreground">Build-up Name:</label>
+      <div className="flex gap-8 mb-8">
+        <div className="space-y-4 w-1/2">
+          <div className="flex items-center gap-2">
+            <div className="w-32">
+              <label className="text-sm text-muted-foreground">Build-up Name:</label>
+            </div>
+            <Input 
+              value={buildUpName}
+              onChange={(e) => setBuildUpName(e.target.value)}
+              className="w-[200px]"
+              disabled={!isEditing}
+            />
           </div>
-          <Input 
-            value={buildUpName}
-            onChange={(e) => setBuildUpName(e.target.value)}
-            className="max-w-md"
-            disabled={!isEditing}
-          />
+          <div className="flex items-center gap-2">
+            <div className="w-32">
+              <label className="text-sm text-muted-foreground">Build-up Area:</label>
+            </div>
+            <div className="text-sm">1 sq. m (Standard)</div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-48">
-            <label className="text-sm text-muted-foreground">Build-up Area:</label>
-          </div>
-          <div className="text-sm">1 sq. m (Standard)</div>
+
+        <div className="w-1/2">
+          <BuildUpChart items={buildUpItems} toggledItems={toggledItems} />
         </div>
       </div>
 
