@@ -164,7 +164,7 @@ export function DetailPanel() {
   }
 
   return (
-    <aside className={`w-[300px] border-r bg-[#f9fafb] fixed top-0 bottom-0 ${leftPosition} z-10 transition-all duration-200`}>
+    <aside className={`w-[300px] border-r bg-[#f9fafb] fixed top-0 bottom-0 ${leftPosition} z-10 transition-all duration-200 flex flex-col`}>
       <Dialog open={!!buildUpToDelete} onOpenChange={() => setBuildUpToDelete(null)}>
         <DialogContent>
           <DialogHeader>
@@ -188,8 +188,8 @@ export function DetailPanel() {
         </DialogContent>
       </Dialog>
 
-      <div className="h-full flex flex-col">
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b px-6 pt-6">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b px-6 pt-6 flex-shrink-0">
           <span className="text-lg font-semibold">Library</span>
         </div>
 
@@ -197,9 +197,9 @@ export function DetailPanel() {
           defaultValue={currentTab} 
           value={currentTab} 
           onValueChange={handleTabChange} 
-          className="h-full flex flex-col"
+          className="flex-1 flex flex-col min-h-0"
         >
-          <div className="px-6">
+          <div className="px-6 flex-shrink-0">
             <TabsList className="w-full grid grid-cols-2 h-9 bg-muted/50">
               <TabsTrigger 
                 value="materials" 
@@ -223,7 +223,7 @@ export function DetailPanel() {
                 className="h-full flex flex-col data-[state=inactive]:hidden m-0"
                 forceMount
               >
-                <div className="px-6 pb-4">
+                <div className="px-6 pb-4 flex-shrink-0">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -235,8 +235,8 @@ export function DetailPanel() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6">
-                  <div className="space-y-2">
+                <div className="flex-1 overflow-y-auto px-6 min-h-0">
+                  <div className="space-y-2 pb-6">
                     {filteredMaterials.map((material) => (
                       <div
                         key={material.uniqueId}
@@ -283,7 +283,7 @@ export function DetailPanel() {
                 className="h-full flex flex-col data-[state=inactive]:hidden m-0"
                 forceMount
               >
-                <div className="px-6 pb-4">
+                <div className="px-6 pb-4 flex-shrink-0">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -295,8 +295,8 @@ export function DetailPanel() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6">
-                  <div className="space-y-4">
+                <div className="flex-1 overflow-y-auto px-6 min-h-0">
+                  <div className="space-y-4 pb-6">
                     <Button 
                       onClick={handleCreateBuildUp} 
                       className="w-full"
