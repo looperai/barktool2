@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AgGridReact } from 'ag-grid-react'
@@ -34,6 +34,12 @@ interface BuildUpFormProps {
   isEditing?: boolean
 }
 
+interface ContextMenuPosition {
+  x: number;
+  y: number;
+  rowId: string | null;
+}
+
 export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildUpFormProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -42,16 +48,87 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
   const [isEditing, setIsEditing] = useState(defaultIsEditing || false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [toggledItems, setToggledItems] = useState<Set<string>>(new Set())
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const [showRowDeleteDialog, setShowRowDeleteDialog] = useState(false)
+  const [rowToDelete, setRowToDelete] = useState<string | null>(null)
+  const gridRef = useRef<AgGridReact>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setBuildUpName(initialData?.name || "")
-    setBuildUpItems(initialData?.items || [])
+    
+    // Calculate a1a3ExcBiogenic for existing items
+    const updatedItems = (initialData?.items || []).map(item => ({
+      ...item,
+      a1a3ExcBiogenic: Number((item.a1a3IncBiogenic - item.a1a3Biogenic).toFixed(3))
+    }));
+    
+    setBuildUpItems(updatedItems);
     setIsEditing(defaultIsEditing || false)
+
+    // Log values when build-up changes
+    if (initialData?.items) {
+      console.group('Build-up Values:', initialData.name);
+      
+      // Log individual rows
+      updatedItems.forEach((item, index) => {
+        console.group(`Row ${index + 1}: ${item.itemName || item.material}`);
+        console.log('A1-A3, inc biogenic:', item.a1a3IncBiogenic);
+        console.log('A1-A3, biogenic:', item.a1a3Biogenic);
+        console.log('A1-A3, exc biogenic:', item.a1a3ExcBiogenic);
+        console.groupEnd();
+      });
+
+      // Calculate and log totals
+      const totals = updatedItems.reduce((acc, item) => ({
+        incBiogenic: acc.incBiogenic + item.a1a3IncBiogenic,
+        biogenic: acc.biogenic + item.a1a3Biogenic,
+        excBiogenic: acc.excBiogenic + item.a1a3ExcBiogenic
+      }), { incBiogenic: 0, biogenic: 0, excBiogenic: 0 });
+
+      console.group('Totals');
+      console.log('Total A1-A3, inc biogenic:', totals.incBiogenic);
+      console.log('Total A1-A3, biogenic:', totals.biogenic);
+      console.log('Total A1-A3, exc biogenic:', totals.excBiogenic);
+      console.groupEnd();
+
+      console.groupEnd();
+    }
   }, [initialData, defaultIsEditing])
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (gridRef.current?.api) {
+        const headerElement = document.querySelector('.ag-header-row')
+        if (headerElement) {
+          const height = headerElement.getBoundingClientRect().height
+          setHeaderHeight(height)
+        }
+      }
+    }
+
+    // Update on initial render and window resize
+    updateHeaderHeight()
+    window.addEventListener('resize', updateHeaderHeight)
+    return () => window.removeEventListener('resize', updateHeaderHeight)
+  }, [])
+
+  // Handle clicking outside context menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        setContextMenu(null);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!mounted) {
     return null
@@ -142,40 +219,70 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         thickness: 0,
         mass: 0,
         a1a3IncBiogenic: 0,
-        a1a3Biogenic: 0
+        a1a3Biogenic: 0,
+        a1a3ExcBiogenic: 0
       }
     ])
   }
 
+  const handleMaterialChange = (params: any) => {
+    const material = materials.find(m => m.iceDbName === params.newValue);
+    
+    if (material) {
+      const thickness = Number(params.data.thickness);
+      const mass = Number(material.density) * thickness / 1000; // Convert mm to m
+      const a1a3IncBiogenic = Number(material.ecfIncBiogenic) * mass;
+      const a1a3Biogenic = Number(material.ecfBiogenic) * mass;
+      const a1a3ExcBiogenic = a1a3IncBiogenic - a1a3Biogenic;
+
+      const updatedItems = buildUpItems.map(item => {
+        if (item.id === params.data.id) {
+          return {
+            ...item,
+            material: material.iceDbName,
+            mass: Number(mass.toFixed(3)),
+            a1a3IncBiogenic: Number(a1a3IncBiogenic.toFixed(3)),
+            a1a3Biogenic: Number(a1a3Biogenic.toFixed(3)),
+            a1a3ExcBiogenic: Number(a1a3ExcBiogenic.toFixed(3))
+          };
+        }
+        return item;
+      });
+      
+      setBuildUpItems(updatedItems);
+    }
+  }
+
+  const handleThicknessChange = (params: any) => {
+    const material = materials.find(m => m.iceDbName === params.data.material);
+    
+    if (material) {
+      const thickness = Number(params.newValue);
+      const mass = Number(material.density) * thickness / 1000; // Convert mm to m
+      const a1a3IncBiogenic = Number(material.ecfIncBiogenic) * mass;
+      const a1a3Biogenic = Number(material.ecfBiogenic) * mass;
+      const a1a3ExcBiogenic = a1a3IncBiogenic - a1a3Biogenic;
+
+      const updatedItems = buildUpItems.map(item => {
+        if (item.id === params.data.id) {
+          return {
+            ...item,
+            thickness,
+            mass: Number(mass.toFixed(3)),
+            a1a3IncBiogenic: Number(a1a3IncBiogenic.toFixed(3)),
+            a1a3Biogenic: Number(a1a3Biogenic.toFixed(3)),
+            a1a3ExcBiogenic: Number(a1a3ExcBiogenic.toFixed(3))
+          };
+        }
+        return item;
+      });
+      
+      setBuildUpItems(updatedItems);
+    }
+  }
+
   // Column definitions for the build-up items grid
   const columnDefs: ColDef<BuildUpItem>[] = [
-    {
-      field: 'toggle',
-      headerName: 'Toggle',
-      width: 30,
-      cellRenderer: (params: any) => {
-        return (
-          <div className="flex items-center justify-center h-full">
-            <button
-              className={cn(
-                "w-4 h-4 rounded-full border transition-colors",
-                toggledItems.has(params.data.id) ? "bg-primary border-primary" : "bg-background"
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                const newToggledItems = new Set(toggledItems);
-                if (newToggledItems.has(params.data.id)) {
-                  newToggledItems.delete(params.data.id);
-                } else {
-                  newToggledItems.add(params.data.id);
-                }
-                setToggledItems(newToggledItems);
-              }}
-            />
-          </div>
-        )
-      }
-    },
     { 
       field: 'itemName', 
       headerName: 'Item Name',
@@ -208,97 +315,19 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         backgroundColor: isEditing ? '#ffffff' : '#f9fafb',
         cursor: isEditing ? 'pointer' : 'default'
       }),
-      onCellValueChanged: (params: any) => {
-        console.log("Material changed:", params.newValue);
-        console.log("Available materials:", materials.map(m => m.iceDbName));
-        const material = materials.find(m => m.iceDbName === params.newValue);
-        console.log("Found material:", material);
-        
-        if (material) {
-          const thickness = Number(params.data.thickness);
-          console.log("Current thickness:", thickness);
-          
-          const mass = Number(material.density) * thickness / 1000; // Convert mm to m
-          console.log("Calculated mass:", mass, "from density:", material.density);
-          
-          const a1a3IncBiogenic = Number(material.ecfIncBiogenic) * mass;
-          const a1a3Biogenic = Number(material.ecfBiogenic) * mass;
-          console.log("Calculated biogenic values:", { a1a3IncBiogenic, a1a3Biogenic });
-
-          const updatedItems = buildUpItems.map(item => {
-            if (item.id === params.data.id) {
-              const updatedItem = {
-                ...item,
-                material: material.iceDbName, // Use the exact material name from the database
-                mass: Number(mass.toFixed(3)),
-                a1a3IncBiogenic: Number(a1a3IncBiogenic.toFixed(3)),
-                a1a3Biogenic: Number(a1a3Biogenic.toFixed(3))
-              };
-              console.log("Updated item:", updatedItem);
-              return updatedItem;
-            }
-            return item;
-          });
-          
-          console.log("Setting build-up items:", updatedItems);
-          setBuildUpItems(updatedItems);
-        } else {
-          console.log("No material found for calculation. Looking for:", params.newValue);
-          console.log("Available materials:", materials.map(m => m.iceDbName));
-        }
-      }
+      onCellValueChanged: handleMaterialChange
     },
     { 
       field: 'thickness', 
       headerName: 'Thickness (mm)',
       editable: isEditing,
       cellEditor: 'agNumberCellEditor',
-      valueParser: (params: any) => {
-        const value = Number(params.newValue);
-        console.log('Parsing thickness value:', value);
-        return value;
-      },
+      valueParser: (params: any) => Number(params.newValue),
       cellStyle: params => ({
         backgroundColor: isEditing ? '#ffffff' : '#f9fafb',
         cursor: isEditing ? 'pointer' : 'default'
       }),
-      onCellValueChanged: (params: any) => {
-        console.log("Thickness changed:", params.newValue, params.data);
-        const material = materials.find(m => m.iceDbName === params.data.material);
-        console.log("Found material:", material);
-        
-        if (material) {
-          const thickness = Number(params.newValue);
-          console.log("Parsed thickness:", thickness);
-          
-          const mass = Number(material.density) * thickness / 1000; // Convert mm to m
-          console.log("Calculated mass:", mass, "from density:", material.density);
-          
-          const a1a3IncBiogenic = Number(material.ecfIncBiogenic) * mass;
-          const a1a3Biogenic = Number(material.ecfBiogenic) * mass;
-          console.log("Calculated biogenic values:", { a1a3IncBiogenic, a1a3Biogenic });
-
-          const updatedItems = buildUpItems.map(item => {
-            if (item.id === params.data.id) {
-              const updatedItem = {
-                ...item,
-                thickness,
-                mass: Number(mass.toFixed(3)),
-                a1a3IncBiogenic: Number(a1a3IncBiogenic.toFixed(3)),
-                a1a3Biogenic: Number(a1a3Biogenic.toFixed(3))
-              };
-              console.log("Updated item:", updatedItem);
-              return updatedItem;
-            }
-            return item;
-          });
-          
-          console.log("Setting build-up items:", updatedItems);
-          setBuildUpItems(updatedItems);
-        } else {
-          console.log("No material found for calculation");
-        }
-      }
+      onCellValueChanged: handleThicknessChange
     },
     { 
       field: 'mass', 
@@ -326,30 +355,81 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
       valueFormatter: (params: any) => {
         return params.value ? params.value.toFixed(3) : '0.000'
       }
-    },
-    {
-      headerName: '',
-      width: 50,
-      cellRenderer: (params: any) => {
-        if (!isEditing) return null
-        return (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              const updatedItems = buildUpItems.filter(item => item.id !== params.data.id)
-              setBuildUpItems(updatedItems)
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )
-      }
     }
   ]
 
+  // Function to handle row deletion
+  const handleRowDelete = () => {
+    if (rowToDelete) {
+      const updatedItems = buildUpItems.filter(item => item.id !== rowToDelete)
+      setBuildUpItems(updatedItems)
+      setRowToDelete(null)
+      setShowRowDeleteDialog(false)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col p-6">
+      <style>
+        {`
+          .ag-theme-alpine .ag-row-selected {
+            background-color: #e6f3ff !important;
+          }
+          .ag-theme-alpine .ag-row-selected > div {
+            background-color: #e6f3ff !important;
+          }
+          .ag-theme-alpine .ag-row-selected > div:first-child {
+            border-left: 4px solid #2563eb !important;
+          }
+          /* Hover styles - only in edit mode */
+          ${isEditing ? `
+            .ag-theme-alpine .ag-row:hover {
+              background-color: #f1f5f9 !important;
+            }
+            .ag-theme-alpine .ag-row:hover > div {
+              background-color: #f1f5f9 !important;
+            }
+          ` : ''}
+          /* Custom context menu styles */
+          .custom-context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            min-width: 160px;
+            z-index: 1000;
+          }
+
+          .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: #ef4444;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+            font-size: 0.875rem;
+          }
+
+          .context-menu-item:hover {
+            background-color: #fee2e2;
+          }
+          /* Remove any conflicting styles */
+          .ag-theme-alpine .ag-row {
+            transition: background-color 0.2s;
+          }
+          .ag-theme-alpine .ag-row-even {
+            background: none;
+          }
+          .ag-theme-alpine .ag-row-odd {
+            background: none;
+          }
+        `}
+      </style>
+      
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -365,6 +445,29 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
             <Button 
               variant="destructive" 
               onClick={handleDelete}
+              className="ml-2"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRowDeleteDialog} onOpenChange={setShowRowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Row</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this row? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowRowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleRowDelete}
               className="ml-2"
             >
               Delete
@@ -476,9 +579,64 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         </div>
       )}
 
-      <div className="flex-1 ag-theme-alpine">
-        <div className="h-full">
+      <div className="flex gap-4">
+        <div className="flex flex-col items-center" style={{ width: '24px', marginTop: `${headerHeight}px` }}>
+          {buildUpItems.map((item, index) => (
+            <div 
+              key={item.id} 
+              style={{ 
+                height: '32px',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className={cn(
+                        "w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110",
+                        toggledItems.has(item.id) 
+                          ? "bg-slate-300 border-slate-300 shadow-sm" 
+                          : "bg-white border-slate-200 hover:border-slate-300"
+                      )}
+                      onClick={() => {
+                        const newToggledItems = new Set(toggledItems);
+                        if (newToggledItems.has(item.id)) {
+                          newToggledItems.delete(item.id);
+                        } else {
+                          newToggledItems.add(item.id);
+                        }
+                        setToggledItems(newToggledItems);
+                        
+                        // Update grid selection
+                        if (gridRef.current?.api) {
+                          const node = gridRef.current.api.getRowNode(String(index));
+                          if (node) {
+                            node.setSelected(!node.isSelected());
+                            gridRef.current.api.refreshCells({
+                              force: true,
+                              rowNodes: [node]
+                            });
+                          }
+                        }
+                      }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="left" align="center">
+                    <p>Click to toggle</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 ag-theme-alpine" style={{ height: '500px' }}>
           <AgGridReact
+            ref={gridRef}
             key={initialData?.id || 'new'}
             rowData={buildUpItems}
             columnDefs={columnDefs}
@@ -488,20 +646,93 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
               resizable: true,
               wrapHeaderText: true,
               autoHeaderHeight: true,
-              autoHeight: true,
               singleClickEdit: true
             }}
             stopEditingWhenCellsLoseFocus={true}
-            domLayout="normal"
-            rowHeight={undefined}
-            noRowsOverlayComponent={() => (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground italic">
-                  No items exist in this build-up. {isEditing && "Click +Add new row to add items"}
-                </p>
-              </div>
-            )}
+            enterNavigatesVertically={true}
+            enterNavigatesVerticallyAfterEdit={true}
+            onCellEditingStopped={(params) => {
+              // Ensure the grid refreshes after edit
+              params.api.refreshCells({
+                force: true,
+                rowNodes: [params.node],
+                columns: [params.column.getId()]
+              });
+            }}
+            onCellContextMenu={(params) => {
+              if (!isEditing) return;
+              
+              const event = params.event as MouseEvent;
+              event.preventDefault();
+              
+              setContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                rowId: params.node.data.id
+              });
+            }}
+            enableRangeSelection={false}
+            suppressRowClickSelection={true}
+            rowSelection="multiple"
+            suppressCellFocus={true}
+            preventDefaultOnContextMenu={true}
+            getRowHeight={() => 32}
+            headerHeight={undefined}
+            suppressRowHoverHighlight={false}
+            onFirstDataRendered={(params) => {
+              // Set initial selection
+              buildUpItems.forEach((item, index) => {
+                if (toggledItems.has(item.id)) {
+                  const node = params.api.getRowNode(String(index));
+                  if (node) {
+                    node.setSelected(true);
+                  }
+                }
+              });
+              params.api.refreshCells({ force: true });
+            }}
+            onGridReady={(params) => {
+              params.api.sizeColumnsToFit();
+              const headerElement = document.querySelector('.ag-header-row');
+              if (headerElement) {
+                const height = headerElement.getBoundingClientRect().height;
+                setHeaderHeight(height);
+              }
+            }}
+            onDisplayedColumnsChanged={() => {
+              const headerElement = document.querySelector('.ag-header-row');
+              if (headerElement) {
+                const height = headerElement.getBoundingClientRect().height;
+                setHeaderHeight(height);
+              }
+            }}
           />
+
+          {/* Custom Context Menu */}
+          {contextMenu && isEditing && (
+            <div
+              ref={contextMenuRef}
+              className="custom-context-menu"
+              style={{
+                left: `${contextMenu.x}px`,
+                top: `${contextMenu.y}px`
+              }}
+            >
+              <div
+                className="context-menu-item"
+                onClick={() => {
+                  if (contextMenu.rowId) {
+                    setRowToDelete(contextMenu.rowId);
+                    setShowRowDeleteDialog(true);
+                  }
+                  setContextMenu(null);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Row
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

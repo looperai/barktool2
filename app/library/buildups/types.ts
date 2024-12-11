@@ -6,6 +6,7 @@ export interface BuildUpItem {
   mass: number;
   a1a3IncBiogenic: number;
   a1a3Biogenic: number;
+  a1a3ExcBiogenic: number;
   toggle?: boolean;
 }
 
