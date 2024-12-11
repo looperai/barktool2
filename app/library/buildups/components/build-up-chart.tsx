@@ -1,6 +1,8 @@
 "use client"
 
 import { BuildUpItem } from "../types"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useState } from "react"
 
 interface BuildUpChartProps {
   items: BuildUpItem[]
@@ -32,7 +34,7 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
   const centerLineY = maxBarHeight / 2
   
   // Helper function to calculate bar height and position
-  const getBarStyles = (value: number, percentage: number, isExcBiogenic: boolean) => {
+  const getBarStyles = (value: number, percentage: number, isExcBiogenic: boolean, isHovered: boolean = false) => {
     // Find the maximum absolute value among all values for scaling
     const allValues = [
       totalA1A3ExcBiogenic,
@@ -49,12 +51,12 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
 
     // Define color pairs (base and toggled) for each type
     const excBiogenicColors = {
-      base: '#94a3b8', // Light gray
-      toggled: '#334155' // Dark gray
+      base: isHovered ? '#64748b' : '#94a3b8', // Darker on hover
+      toggled: isHovered ? '#1e293b' : '#334155' // Darker on hover
     }
     const biogenicColors = {
-      base: '#16a34a',
-      toggled: '#166534' // Darker green
+      base: isHovered ? '#15803d' : '#16a34a', // Darker on hover
+      toggled: isHovered ? '#14532d' : '#166534' // Darker on hover
     }
     
     const colors = isExcBiogenic ? excBiogenicColors : biogenicColors
@@ -69,7 +71,8 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
         position: 'absolute' as const,
         backgroundColor: colors.base,
         opacity: 0.3,
-        border: '1px solid #94a3b8'
+        border: '1px solid #94a3b8',
+        transition: 'background-color 0.2s'
       },
       highlight: {
         height: `${(height * percentage) / 100}px`,
@@ -80,13 +83,14 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
         position: 'absolute' as const,
         backgroundColor: colors.toggled,
         opacity: 1,
-        transition: 'height 0.3s ease'
+        transition: 'background-color 0.2s'
       }
     }
   }
 
-  const excBiogenicStyles = getBarStyles(totalA1A3ExcBiogenic, toggledExcBiogenicPercentage, true)
-  const biogenicStyles = getBarStyles(totalA1A3Biogenic, toggledBiogenicPercentage, false)
+  const [hoveredBar, setHoveredBar] = useState<'exc' | 'bio' | null>(null)
+  const excBiogenicStyles = getBarStyles(totalA1A3ExcBiogenic, toggledExcBiogenicPercentage, true, hoveredBar === 'exc')
+  const biogenicStyles = getBarStyles(totalA1A3Biogenic, toggledBiogenicPercentage, false, hoveredBar === 'bio')
 
   return (
     <div className="flex flex-col items-start gap-2 w-full">
@@ -102,7 +106,26 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
           <div style={excBiogenicStyles.bar}>
             {toggledItems.size > 0 && <div style={excBiogenicStyles.highlight} />}
           </div>
-          {toggledItems.size > 0 && toggledExcBiogenicPercentage > 0 && (
+          {/* Hover area for top half */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div 
+                  className="absolute top-0 w-full cursor-help"
+                  style={{ height: '50%' }}
+                  onMouseEnter={() => setHoveredBar('exc')}
+                  onMouseLeave={() => setHoveredBar(null)}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="flex flex-col gap-2">
+                <p className="font-medium">A1-A3, excluding biogenic</p>
+                <p className="text-sm text-muted-foreground">
+                  {totalA1A3ExcBiogenic.toFixed(3)} kgCO2e/kg
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {toggledItems.size > 0 && (
             <div 
               className="absolute text-sm font-medium"
               style={{ 
@@ -123,7 +146,26 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
           <div style={biogenicStyles.bar}>
             {toggledItems.size > 0 && <div style={biogenicStyles.highlight} />}
           </div>
-          {toggledItems.size > 0 && toggledBiogenicPercentage > 0 && (
+          {/* Hover area for bottom half */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div 
+                  className="absolute bottom-0 w-full cursor-help"
+                  style={{ height: '50%' }}
+                  onMouseEnter={() => setHoveredBar('bio')}
+                  onMouseLeave={() => setHoveredBar(null)}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="left" className="flex flex-col gap-2">
+                <p className="font-medium">A1-A3, biogenic</p>
+                <p className="text-sm text-muted-foreground">
+                  {totalA1A3Biogenic.toFixed(3)} kgCO2e/kg
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {toggledItems.size > 0 && (
             <div 
               className="absolute text-sm font-medium"
               style={{ 
