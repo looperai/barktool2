@@ -56,6 +56,10 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     setBuildUpName(initialData?.name || "")
     
     // Calculate a1a3ExcBiogenic for existing items
@@ -66,6 +70,17 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
     
     setBuildUpItems(updatedItems);
     setIsEditing(defaultIsEditing || false)
+
+    // Reset toggledItems when entering edit mode
+    if (defaultIsEditing) {
+      setToggledItems(new Set())
+      
+      // Also reset grid selection if grid is ready
+      if (gridRef.current?.api) {
+        gridRef.current.api.deselectAll()
+        gridRef.current.api.refreshCells({ force: true })
+      }
+    }
 
     // Log values when build-up changes
     if (initialData?.items) {
@@ -97,9 +112,18 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
     }
   }, [initialData, defaultIsEditing])
 
+  // Add another effect to handle isEditing changes
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    if (isEditing) {
+      setToggledItems(new Set())
+      
+      // Reset grid selection if grid is ready
+      if (gridRef.current?.api) {
+        gridRef.current.api.deselectAll()
+        gridRef.current.api.refreshCells({ force: true })
+      }
+    }
+  }, [isEditing])
 
   useEffect(() => {
     const updateHeaderHeight = () => {
