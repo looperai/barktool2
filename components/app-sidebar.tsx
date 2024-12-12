@@ -15,27 +15,32 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 const navigation = [
   {
     title: "Home",
     icon: Home,
     href: "/",
+    pattern: /^\/$/,
   },
   {
     title: "Library",
     icon: Library,
     href: "/library/materials",
+    pattern: /^\/library/,
   },
   {
     title: "Projects",
     icon: FolderKanban,
     href: "/projects",
+    pattern: /^\/projects/,
   },
   {
     title: "Compare",
     icon: GitCompare,
     href: "/compare",
+    pattern: /^\/compare/,
   },
 ]
 
@@ -77,31 +82,52 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navigation.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-                tooltip={item.title}
-                className={`
-                  ${state === "expanded" ? "pl-6" : "px-0"}
-                  hover:bg-accent/50 transition-colors
-                  w-full
-                `}
-              >
-                <Link 
-                  href={item.href} 
-                  className={`
-                    flex items-center gap-3
-                    ${state === "expanded" ? "" : "justify-center w-full"}
-                  `}
+          {navigation.map((item) => {
+            const isActive = item.pattern.test(pathname)
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.title}
+                  className={cn(
+                    state === "expanded" ? "pl-6" : "px-0",
+                    "hover:bg-accent/50 transition-colors relative w-full",
+                    isActive && [
+                      "bg-accent/70",
+                      "after:absolute after:left-0 after:top-1/2 after:-translate-y-1/2",
+                      "after:h-8 after:w-1 after:rounded-r-md after:bg-primary",
+                      "hover:bg-accent/70"
+                    ]
+                  )}
                 >
-                  <item.icon className="h-4 w-4" />
-                  <span className={state === "expanded" ? "block" : "hidden"}>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+                  <Link 
+                    href={item.href} 
+                    className={cn(
+                      "flex items-center gap-3 py-2",
+                      state === "expanded" ? "" : "justify-center w-full"
+                    )}
+                  >
+                    <item.icon 
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive && "text-primary"
+                      )} 
+                    />
+                    <span 
+                      className={cn(
+                        state === "expanded" ? "block" : "hidden",
+                        "font-medium",
+                        isActive && "text-primary"
+                      )}
+                    >
+                      {item.title}
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarRail />

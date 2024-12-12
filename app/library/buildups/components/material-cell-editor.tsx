@@ -1,18 +1,18 @@
 "use client"
 
-import { Check } from "lucide-react"
+import { Check, ChevronRight, ChevronDown } from "lucide-react"
 import { ICellEditorParams } from "ag-grid-community"
-import { forwardRef, useEffect, useImperativeHandle, useState, useRef } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useState, useRef, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
 } from "@/components/ui/command"
 
 interface MaterialType {
+  material: string;
   iceDbName: string;
   density: number;
   ecfIncBiogenic: number;
@@ -23,8 +23,14 @@ interface MaterialCellEditorProps extends ICellEditorParams {
   materials: MaterialType[];
 }
 
+interface GroupedMaterials {
+  [key: string]: MaterialType[];
+}
+
 export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, ref) => {
   const [value, setValue] = useState(props.value || "")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
   const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined)
 
@@ -40,18 +46,65 @@ export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, re
     }
   }))
 
+  // Group materials and filter based on search
+  const groupedAndFilteredMaterials = useMemo(() => {
+    // First, group all materials
+    const groups: GroupedMaterials = {}
+    props.materials.forEach(material => {
+      if (!groups[material.material]) {
+        groups[material.material] = []
+      }
+      groups[material.material].push(material)
+    })
+
+    // If there's no search term, return all groups
+    if (!searchTerm.trim()) {
+      return groups
+    }
+
+    // If there is a search term, filter groups and items
+    const searchLower = searchTerm.toLowerCase().trim()
+    const filteredGroups: GroupedMaterials = {}
+
+    Object.entries(groups).forEach(([groupName, items]) => {
+      // Keep items that match the search term in either group name or item name
+      const filteredItems = items.filter(item => 
+        item.iceDbName.toLowerCase().includes(searchLower) ||
+        item.material.toLowerCase().includes(searchLower)
+      )
+
+      // If there are matching items or the group name matches, keep the group
+      if (filteredItems.length > 0 || groupName.toLowerCase().includes(searchLower)) {
+        filteredGroups[groupName] = filteredItems
+      }
+    })
+
+    return filteredGroups
+  }, [props.materials, searchTerm])
+
   const handleSelect = (currentValue: string) => {
-    console.log('Selected material:', currentValue);
-    setValue(currentValue);
+    setValue(currentValue)
     if (props.api) {
-      const node = props.api.getRowNode(String(props.rowIndex));
+      const node = props.api.getRowNode(String(props.rowIndex))
       if (node) {
-        node.setDataValue(props.column.getColId(), currentValue);
+        node.setDataValue(props.column.getColId(), currentValue)
       }
     }
     setTimeout(() => {
-      props.stopEditing();
-    }, 0);
+      props.stopEditing()
+    }, 0)
+  }
+
+  const toggleGroup = (material: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(material)) {
+        next.delete(material)
+      } else {
+        next.add(material)
+      }
+      return next
+    })
   }
 
   useEffect(() => {
@@ -61,6 +114,23 @@ export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, re
       setMaxHeight(maxHeight)
     }
   }, [props.eGridCell])
+
+  // Handle group expansion/collapse based on search
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      // Expand groups when searching
+      setExpandedGroups(prev => {
+        const next = new Set(prev)
+        Object.keys(groupedAndFilteredMaterials).forEach(groupName => {
+          next.add(groupName)
+        })
+        return next
+      })
+    } else {
+      // Collapse all groups when search is cleared
+      setExpandedGroups(new Set())
+    }
+  }, [searchTerm, groupedAndFilteredMaterials])
 
   return (
     <div 
@@ -79,28 +149,50 @@ export const MaterialCellEditor = forwardRef((props: MaterialCellEditorProps, re
         <CommandInput 
           placeholder="Search materials..." 
           className="h-9"
+          value={searchTerm}
+          onValueChange={setSearchTerm}
           autoFocus={true}
         />
-        <CommandEmpty>No material found.</CommandEmpty>
         <CommandGroup 
           className="overflow-y-auto"
           style={{ maxHeight: maxHeight ? `${maxHeight}px` : '200px' }}
         >
-          {props.materials.map((material) => (
-            <CommandItem
-              key={material.iceDbName}
-              value={material.iceDbName}
-              onSelect={() => handleSelect(material.iceDbName)}
-              className="px-3"
-            >
-              <Check
-                className={cn(
-                  "mr-2 h-4 w-4",
-                  value === material.iceDbName ? "opacity-100" : "opacity-0"
-                )}
-              />
-              {material.iceDbName}
-            </CommandItem>
+          {Object.entries(groupedAndFilteredMaterials).map(([material, items]) => (
+            <div key={material} className="space-y-1 px-2">
+              <div
+                className="rounded-lg p-2 text-sm font-medium hover:bg-accent/50 transition-colors cursor-pointer flex items-center justify-between"
+                onClick={() => toggleGroup(material)}
+              >
+                <div className="flex items-center gap-2">
+                  {expandedGroups.has(material) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <span>{material} ({items.length})</span>
+                </div>
+              </div>
+              {expandedGroups.has(material) && (
+                <div className="pl-4 space-y-1">
+                  {items.map((item) => (
+                    <CommandItem
+                      key={item.iceDbName}
+                      value={item.iceDbName}
+                      onSelect={() => handleSelect(item.iceDbName)}
+                      className="rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === item.iceDbName ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <span className="text-sm truncate">{item.iceDbName}</span>
+                    </CommandItem>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </CommandGroup>
       </Command>

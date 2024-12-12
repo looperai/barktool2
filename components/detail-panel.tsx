@@ -6,7 +6,7 @@ import { Search, Plus, Trash2, Copy } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSidebar } from "@/components/ui/sidebar"
 import {
   Dialog,
@@ -36,6 +36,33 @@ export function DetailPanel() {
   const [buildUpToDelete, setBuildUpToDelete] = useState<SavedBuildUp | null>(null)
   const [mounted, setMounted] = useState(false)
   const [selectedBuildUpId, setSelectedBuildUpId] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  // Filter materials based on search
+  const filteredMaterials = useMemo(() => 
+    materials.filter(material =>
+      material.iceDbName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.material.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [searchTerm]
+  )
+
+  // Group materials by the material property
+  const groupedMaterials = useMemo(() => {
+    const groups = new Map<string, typeof materials>()
+    filteredMaterials.forEach(material => {
+      const existing = groups.get(material.material) || []
+      groups.set(material.material, [...existing, material])
+    })
+    return groups
+  }, [filteredMaterials])
+
+  const filteredBuildUps = useMemo(() => 
+    buildUps.filter(buildUp =>
+      buildUp.name.toLowerCase().includes(buildUpSearchTerm.toLowerCase())
+    ),
+    [buildUps, buildUpSearchTerm]
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -63,6 +90,18 @@ export function DetailPanel() {
       setSelectedBuildUpId(urlId || null)
     }
   }, [mounted, searchParams, pathname, router])
+
+  const toggleGroup = (material: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(material)) {
+        next.delete(material)
+      } else {
+        next.add(material)
+      }
+      return next
+    })
+  }
 
   if (!pathname.startsWith('/library')) {
     return null
@@ -147,14 +186,6 @@ export function DetailPanel() {
     router.push(`/library/buildups?id=${newBuildUp.id}`)
   }
 
-  const filteredMaterials = materials.filter(material =>
-    material.iceDbName.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const filteredBuildUps = buildUps.filter(buildUp =>
-    buildUp.name.toLowerCase().includes(buildUpSearchTerm.toLowerCase())
-  )
-
   const leftPosition = state === "expanded" ? "left-[16rem]" : "left-[3rem]"
 
   // Add a helper function for number formatting
@@ -237,41 +268,60 @@ export function DetailPanel() {
 
                 <div className="flex-1 overflow-y-auto px-6 min-h-0">
                   <div className="space-y-2 pb-6">
-                    {filteredMaterials.map((material) => (
-                      <div
-                        key={material.uniqueId}
-                        className="rounded-lg border bg-card p-3 text-card-foreground hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => handleMaterialClick(material)}
-                      >
-                        <div className="text-sm font-medium">
-                          {material.iceDbName}
+                    {Array.from(groupedMaterials.entries()).map(([material, items]) => (
+                      <div key={material} className="space-y-1">
+                        <div
+                          className="rounded-lg border bg-card p-3 text-card-foreground hover:bg-accent/50 transition-colors cursor-pointer flex justify-between items-center"
+                          onClick={() => toggleGroup(material)}
+                        >
+                          <div className="text-sm font-medium">
+                            {material} ({items.length})
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {expandedGroups.has(material) ? '▼' : '▶'}
+                          </div>
                         </div>
-                        <div className="mt-2 flex justify-between text-xs">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-muted-foreground whitespace-nowrap">
-                                  {formatNumber(Number(material.ecfIncBiogenic))}
+                        {expandedGroups.has(material) && (
+                          <div className="pl-4 space-y-1">
+                            {items.map((item) => (
+                              <div
+                                key={item.uniqueId}
+                                className="rounded-lg border bg-card p-3 text-card-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+                                onClick={() => handleMaterialClick(item)}
+                              >
+                                <div className="text-sm">
+                                  {item.iceDbName}
                                 </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Including biogenic carbon</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-green-600 whitespace-nowrap">
-                                  {formatNumber(Number(material.ecfBiogenic))}
+                                <div className="mt-2 flex justify-between text-xs">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <span className="text-muted-foreground">
+                                          {formatNumber(item.ecfIncBiogenic)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Including biogenic carbon</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <span className="text-green-600">
+                                          {formatNumber(item.ecfBiogenic)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Biogenic carbon</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Biogenic carbon</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
