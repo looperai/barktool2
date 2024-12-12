@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DetailPanel } from "@/components/detail-panel"
 import { MainContentWrapper } from "@/components/main-content-wrapper"
+import { DraggableCompareButton } from "@/components/draggable-compare-button"
 
 export const metadata = {
   title: "BarkTool",
@@ -30,6 +31,7 @@ export default function RootLayout({
             </div>
           </div>
         </SidebarProvider>
+        <DraggableCompareButton />
       </body>
     </html>
   )

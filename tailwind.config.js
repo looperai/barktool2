@@ -72,5 +72,7 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), function({ addVariant }) {
+    addVariant('create-project-btn-hover', '.create-project-btn:hover &')
+  }],
 } 

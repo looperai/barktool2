@@ -220,7 +220,7 @@ export function DetailPanel() {
       </Dialog>
 
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b px-6 pt-6 flex-shrink-0">
+        <div className="flex items-center gap-2 pb-5 border-b px-6 pt-6 flex-shrink-0">
           <span className="text-lg font-semibold">Library</span>
         </div>
 

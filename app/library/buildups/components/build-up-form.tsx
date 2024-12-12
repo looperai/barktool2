@@ -517,273 +517,280 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-2 mb-0 pb-0 border-b px-1 pt-1">
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsEditing(true)}
-                  disabled={isEditing || !initialData}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDuplicate}
-                  disabled={!initialData}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Duplicate</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowDeleteDialog(true)}
-                  disabled={!initialData}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {isEditing && (
-          <div className="ml-auto">
-            <Button onClick={handleSave}>
-              {initialData ? 'Update' : 'Create'}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 p-6 pt-8">
-        <div className="flex gap-8 mb-8">
-          <div className="space-y-4 w-1/2 pt-4">
+      <div className="flex flex-col h-full -m-6">
+        <div className="bg-[#f9fafb] border-b">
+          <div className="flex items-center justify-between gap-2 px-6 pt-6 pb-3">
             <div className="flex items-center gap-2">
-              <div className="w-32">
-                <label className="text-sm text-muted-foreground">Build-up Name:</label>
-              </div>
-              <Input 
+              <Input
+                placeholder="Build-up Name"
                 value={buildUpName}
                 onChange={(e) => setBuildUpName(e.target.value)}
-                className="w-[200px]"
                 disabled={!isEditing}
+                className={cn(
+                  "w-[300px]",
+                  isEditing && "bg-white"
+                )}
               />
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-32">
-                <label className="text-sm text-muted-foreground">Build-up Area:</label>
+              {isEditing ? (
+                <Button
+                  onClick={handleSave}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Update
+                </Button>
+              ) : (
+                <>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsEditing(true)}
+                          className="hover:bg-accent/50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Edit</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleDuplicate}
+                          className="hover:bg-accent/50"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Duplicate</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowDeleteDialog(true)}
+                          className="hover:bg-accent/50"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 bg-white px-6 py-6">
+          <div className="flex gap-8 mb-8">
+            <div className="space-y-4 w-1/2 pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-32">
+                  <label className="text-sm text-muted-foreground">Build-up Area:</label>
+                </div>
+                <div className="text-sm">1 sq. m (Standard)</div>
               </div>
-              <div className="text-sm">1 sq. m (Standard)</div>
+            </div>
+
+            <div className="w-1/2 pt-4">
+              <BuildUpChart items={buildUpItems} toggledItems={toggledItems} />
             </div>
           </div>
 
-          <div className="w-1/2 pt-4">
-            <BuildUpChart items={buildUpItems} toggledItems={toggledItems} />
-          </div>
-        </div>
+          {isEditing && (
+            <div className="flex justify-start mb-2">
+              <Button 
+                variant="outline" 
+                onClick={addNewRow}
+                className="h-8"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add new row
+              </Button>
+            </div>
+          )}
 
-        {isEditing && (
-          <div className="flex justify-start mb-2">
-            <Button 
-              variant="outline" 
-              onClick={addNewRow}
-              className="h-8"
+          <div className="flex gap-2">
+            <div 
+              className="flex flex-col items-center" 
+              style={{ 
+                width: '24px', 
+                marginTop: `${headerHeight}px`,
+                marginLeft: '-4px' 
+              }}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add new row
-            </Button>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <div 
-            className="flex flex-col items-center" 
-            style={{ 
-              width: '24px', 
-              marginTop: `${headerHeight}px`,
-              marginLeft: '-4px' 
-            }}
-          >
-            {buildUpItems.map((item, index) => (
-              <div 
-                key={item.id} 
-                style={{ 
-                  height: '32px',
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        className={cn(
-                          "w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110",
-                          toggledItems.has(item.id) 
-                            ? "bg-slate-300 border-slate-300 shadow-sm" 
-                            : "bg-white border-slate-200 hover:border-slate-300"
-                        )}
-                        onClick={() => {
-                          const newToggledItems = new Set(toggledItems);
-                          if (newToggledItems.has(item.id)) {
-                            newToggledItems.delete(item.id);
-                          } else {
-                            newToggledItems.add(item.id);
-                          }
-                          setToggledItems(newToggledItems);
-                          
-                          // Update grid selection
-                          if (gridRef.current?.api) {
-                            const node = gridRef.current.api.getRowNode(String(index));
-                            if (node) {
-                              node.setSelected(!node.isSelected());
-                              gridRef.current.api.refreshCells({
-                                force: true,
-                                rowNodes: [node]
-                              });
-                            }
-                          }
-                        }}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent side="left" align="center">
-                      <p>Click to toggle</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex-1 ag-theme-alpine" style={{ height: '500px' }}>
-            <AgGridReact
-              ref={gridRef}
-              key={initialData?.id || 'new'}
-              rowData={buildUpItems}
-              columnDefs={columnDefs}
-              defaultColDef={{
-                flex: 1,
-                minWidth: 150,
-                resizable: true,
-                wrapHeaderText: true,
-                autoHeaderHeight: true,
-                singleClickEdit: true
-              }}
-              stopEditingWhenCellsLoseFocus={true}
-              enterNavigatesVertically={true}
-              enterNavigatesVerticallyAfterEdit={true}
-              onCellEditingStopped={(params) => {
-                // Ensure the grid refreshes after edit
-                params.api.refreshCells({
-                  force: true,
-                  rowNodes: [params.node],
-                  columns: [params.column.getId()]
-                });
-              }}
-              onCellContextMenu={(params) => {
-                if (!isEditing) return;
-                
-                const event = params.event as MouseEvent;
-                event.preventDefault();
-                
-                setContextMenu({
-                  x: event.clientX,
-                  y: event.clientY,
-                  rowId: params.node.data.id
-                });
-              }}
-              enableRangeSelection={false}
-              suppressRowClickSelection={true}
-              rowSelection="multiple"
-              suppressCellFocus={true}
-              preventDefaultOnContextMenu={true}
-              getRowHeight={() => 32}
-              headerHeight={undefined}
-              suppressRowHoverHighlight={false}
-              onFirstDataRendered={(params) => {
-                // Set initial selection
-                buildUpItems.forEach((item, index) => {
-                  if (toggledItems.has(item.id)) {
-                    const node = params.api.getRowNode(String(index));
-                    if (node) {
-                      node.setSelected(true);
-                    }
-                  }
-                });
-                params.api.refreshCells({ force: true });
-              }}
-              onGridReady={(params) => {
-                params.api.sizeColumnsToFit();
-                const headerElement = document.querySelector('.ag-header-row');
-                if (headerElement) {
-                  const height = headerElement.getBoundingClientRect().height;
-                  setHeaderHeight(height);
-                }
-              }}
-              onDisplayedColumnsChanged={() => {
-                const headerElement = document.querySelector('.ag-header-row');
-                if (headerElement) {
-                  const height = headerElement.getBoundingClientRect().height;
-                  setHeaderHeight(height);
-                }
-              }}
-            />
-
-            {/* Custom Context Menu */}
-            {contextMenu && isEditing && (
-              <div
-                ref={contextMenuRef}
-                className="custom-context-menu"
-                style={{
-                  left: `${contextMenu.x}px`,
-                  top: `${contextMenu.y}px`
-                }}
-              >
-                <div
-                  className="context-menu-item"
-                  onClick={() => {
-                    if (contextMenu.rowId) {
-                      setRowToDelete(contextMenu.rowId);
-                      setShowRowDeleteDialog(true);
-                    }
-                    setContextMenu(null);
+              {buildUpItems.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  style={{ 
+                    height: '32px',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Row
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110",
+                            toggledItems.has(item.id) 
+                              ? "bg-slate-300 border-slate-300 shadow-sm" 
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          )}
+                          onClick={() => {
+                            const newToggledItems = new Set(toggledItems);
+                            if (newToggledItems.has(item.id)) {
+                              newToggledItems.delete(item.id);
+                            } else {
+                              newToggledItems.add(item.id);
+                            }
+                            setToggledItems(newToggledItems);
+                            
+                            // Update grid selection
+                            if (gridRef.current?.api) {
+                              const node = gridRef.current.api.getRowNode(String(index));
+                              if (node) {
+                                node.setSelected(!node.isSelected());
+                                gridRef.current.api.refreshCells({
+                                  force: true,
+                                  rowNodes: [node]
+                                });
+                              }
+                            }
+                          }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="left" align="center">
+                        <p>Click to toggle</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+
+            <div className="flex-1 ag-theme-alpine" style={{ height: '500px' }}>
+              <AgGridReact
+                ref={gridRef}
+                key={initialData?.id || 'new'}
+                rowData={buildUpItems}
+                columnDefs={columnDefs}
+                defaultColDef={{
+                  flex: 1,
+                  minWidth: 150,
+                  resizable: true,
+                  wrapHeaderText: true,
+                  autoHeaderHeight: true,
+                  singleClickEdit: true
+                }}
+                stopEditingWhenCellsLoseFocus={true}
+                enterNavigatesVertically={true}
+                enterNavigatesVerticallyAfterEdit={true}
+                onCellEditingStopped={(params) => {
+                  // Ensure the grid refreshes after edit
+                  params.api.refreshCells({
+                    force: true,
+                    rowNodes: [params.node],
+                    columns: [params.column.getId()]
+                  });
+                }}
+                onCellContextMenu={(params) => {
+                  if (!isEditing) return;
+                  
+                  const event = params.event as MouseEvent;
+                  event.preventDefault();
+                  
+                  setContextMenu({
+                    x: event.clientX,
+                    y: event.clientY,
+                    rowId: params.node.data.id
+                  });
+                }}
+                enableRangeSelection={false}
+                suppressRowClickSelection={true}
+                rowSelection="multiple"
+                suppressCellFocus={true}
+                preventDefaultOnContextMenu={true}
+                getRowHeight={() => 32}
+                headerHeight={undefined}
+                suppressRowHoverHighlight={false}
+                onFirstDataRendered={(params) => {
+                  // Set initial selection
+                  buildUpItems.forEach((item, index) => {
+                    if (toggledItems.has(item.id)) {
+                      const node = params.api.getRowNode(String(index));
+                      if (node) {
+                        node.setSelected(true);
+                      }
+                    }
+                  });
+                  params.api.refreshCells({ force: true });
+                }}
+                onGridReady={(params) => {
+                  params.api.sizeColumnsToFit();
+                  const headerElement = document.querySelector('.ag-header-row');
+                  if (headerElement) {
+                    const height = headerElement.getBoundingClientRect().height;
+                    setHeaderHeight(height);
+                  }
+                }}
+                onDisplayedColumnsChanged={() => {
+                  const headerElement = document.querySelector('.ag-header-row');
+                  if (headerElement) {
+                    const height = headerElement.getBoundingClientRect().height;
+                    setHeaderHeight(height);
+                  }
+                }}
+              />
+
+              {/* Custom Context Menu */}
+              {contextMenu && isEditing && (
+                <div
+                  ref={contextMenuRef}
+                  className="custom-context-menu"
+                  style={{
+                    left: `${contextMenu.x}px`,
+                    top: `${contextMenu.y}px`
+                  }}
+                >
+                  <div
+                    className="context-menu-item"
+                    onClick={() => {
+                      if (contextMenu.rowId) {
+                        setRowToDelete(contextMenu.rowId);
+                        setShowRowDeleteDialog(true);
+                      }
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Row
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
