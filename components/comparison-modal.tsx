@@ -86,6 +86,15 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Clear selections when modal opens
+  useEffect(() => {
+    if (open) {
+      setSelectedItems([])
+      setSearchValue("")
+      setExpandedGroups([])
+    }
+  }, [open])
+
   // Handle clicks outside of dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
