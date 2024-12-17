@@ -126,6 +126,16 @@ export function CreateProjectModal({
     },
   })
 
+  // Reset form and step when modal is closed
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      form.reset()
+      setCurrentStep(1)
+      setExpandedElements(new Set())
+    }
+    onOpenChange(open)
+  }
+
   useEffect(() => {
     // Load build-ups from localStorage
     const savedBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
@@ -176,6 +186,16 @@ export function CreateProjectModal({
       const elementId = parentId ? `${parentId}-${key}` : key
       const hasChildren = typeof value === 'object' && Object.keys(value).length > 0
       const isExpanded = expandedElements.has(elementId)
+      const hierarchyLevel = elementId.split('-').length
+      
+      // Calculate vertical spacing based on hierarchy level
+      const getVerticalSpacing = () => {
+        switch (hierarchyLevel) {
+          case 1: return 'py-3' // Top level items (1, 2, 3)
+          case 2: return 'py-2' // Second level items (1.1, 1.2, etc)
+          default: return 'py-1' // Third level and deeper
+        }
+      }
 
       if (!form.getValues(`buildingElements.${elementId}`)) {
         form.setValue(`buildingElements.${elementId}`, {
@@ -196,8 +216,11 @@ export function CreateProjectModal({
 
       return (
         <div key={elementId}>
-          <div className="grid grid-cols-[2fr,1fr,1fr,1fr,2fr] gap-4 items-center py-1 px-4 hover:bg-muted/50">
-            <div className="flex items-center gap-2">
+          <div className={cn(
+            "grid grid-cols-[minmax(300px,2fr),1fr,1fr,1fr,2fr] gap-4 items-center hover:bg-muted/50",
+            getVerticalSpacing()
+          )}>
+            <div className="flex items-center gap-2 pl-4">
               {hasChildren && (
                 <button
                   type="button"
@@ -207,7 +230,10 @@ export function CreateProjectModal({
                   {isExpanded ? "▼" : "▶"}
                 </button>
               )}
-              <span className="text-sm">{key}</span>
+              <span className={cn(
+                "text-sm",
+                hierarchyLevel === 1 && "font-medium"
+              )}>{key}</span>
             </div>
             {!hasChildren ? (
               <>
@@ -223,7 +249,8 @@ export function CreateProjectModal({
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
-                            const width = e.target.value ? Number(e.target.value) : null
+                            const value = e.target.value
+                            const width = value ? Number(value) : null
                             field.onChange(width)
                             
                             const length = form.getValues(`buildingElements.${elementId}.length`)
@@ -247,7 +274,8 @@ export function CreateProjectModal({
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
-                            const length = e.target.value ? Number(e.target.value) : null
+                            const value = e.target.value
+                            const length = value ? Number(value) : null
                             field.onChange(length)
                             
                             const width = form.getValues(`buildingElements.${elementId}.width`)
@@ -271,7 +299,8 @@ export function CreateProjectModal({
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
-                            const area = e.target.value ? Number(e.target.value) : null
+                            const value = e.target.value
+                            const area = value ? Number(value) : null
                             field.onChange(area)
                             form.setValue(`buildingElements.${elementId}.width`, null)
                             form.setValue(`buildingElements.${elementId}.length`, null)
@@ -287,8 +316,16 @@ export function CreateProjectModal({
                   render={({ field }) => (
                     <FormItem>
                       <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          // Preserve existing values
+                          const currentElement = form.getValues(`buildingElements.${elementId}`)
+                          form.setValue(`buildingElements.${elementId}`, {
+                            ...currentElement,
+                            buildupId: value
+                          })
+                        }}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -322,7 +359,7 @@ export function CreateProjectModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{steps[currentStep - 1].name}</DialogTitle>
@@ -330,26 +367,18 @@ export function CreateProjectModal({
 
         {/* Stepper */}
         <nav aria-label="Progress" className="mb-8">
-          <ol role="list" className="flex items-center">
+          <ol role="list" className="relative flex justify-between w-full px-4">
+            <div className="absolute top-[15px] left-[2.5rem] right-[2.5rem] h-0.5 bg-gray-200" />
             {steps.map((step, stepIdx) => (
-              <li
-                key={step.name}
-                className={cn(
-                  stepIdx !== steps.length - 1 ? "pr-8 sm:pr-20" : "",
-                  "relative"
-                )}
-              >
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="h-0.5 w-full bg-gray-200" />
-                </div>
+              <li key={step.name} className="relative flex flex-col items-center w-40">
                 <div
                   className={cn(
-                    "relative flex h-8 w-8 items-center justify-center rounded-full",
+                    "relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white",
                     currentStep > step.id
                       ? "bg-primary text-primary-foreground"
                       : currentStep === step.id
-                      ? "border-2 border-primary bg-background"
-                      : "border-2 border-gray-300 bg-background"
+                      ? "border-2 border-primary"
+                      : "border-2 border-gray-300"
                   )}
                 >
                   {currentStep > step.id ? (
@@ -358,6 +387,7 @@ export function CreateProjectModal({
                     <span>{step.id}</span>
                   )}
                 </div>
+                <span className="mt-2 text-sm font-medium text-center">{step.name}</span>
               </li>
             ))}
           </ol>
@@ -625,8 +655,8 @@ export function CreateProjectModal({
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="rounded-lg border p-4">
-                  <div className="grid grid-cols-[2fr,1fr,1fr,1fr,2fr] gap-4 mb-4 px-4">
-                    <div className="font-medium text-sm">Category</div>
+                  <div className="grid grid-cols-[minmax(300px,2fr),1fr,1fr,1fr,2fr] gap-4 mb-4">
+                    <div className="font-medium text-sm pl-4">Category</div>
                     <div className="font-medium text-sm">Width (m)</div>
                     <div className="font-medium text-sm">Length (m)</div>
                     <div className="font-medium text-sm">Area (m²)</div>
