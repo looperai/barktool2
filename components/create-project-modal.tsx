@@ -195,22 +195,22 @@ export function CreateProjectModal({
       }
 
       return (
-        <div key={elementId} className="ml-4">
-          <div className="flex items-center gap-2 py-1">
-            {hasChildren && (
-              <button
-                type="button"
-                onClick={() => toggleElement(elementId)}
-                className="text-sm"
-              >
-                {isExpanded ? "▼" : "▶"}
-              </button>
-            )}
-            <span className="text-sm">{key}</span>
-          </div>
-          {!hasChildren && (
-            <div className="ml-4 grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+        <div key={elementId}>
+          <div className="grid grid-cols-[2fr,1fr,1fr,1fr,2fr] gap-4 items-center py-1 px-4 hover:bg-muted/50">
+            <div className="flex items-center gap-2">
+              {hasChildren && (
+                <button
+                  type="button"
+                  onClick={() => toggleElement(elementId)}
+                  className="text-sm"
+                >
+                  {isExpanded ? "▼" : "▶"}
+                </button>
+              )}
+              <span className="text-sm">{key}</span>
+            </div>
+            {!hasChildren ? (
+              <>
                 <FormField
                   control={form.control}
                   name={`buildingElements.${elementId}.width`}
@@ -219,7 +219,7 @@ export function CreateProjectModal({
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Width (m)"
+                          placeholder="Width"
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
@@ -243,7 +243,7 @@ export function CreateProjectModal({
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Length (m)"
+                          placeholder="Length"
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
@@ -267,13 +267,12 @@ export function CreateProjectModal({
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Area (m²)"
+                          placeholder="Area"
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => {
                             const area = e.target.value ? Number(e.target.value) : null
                             field.onChange(area)
-                            // Reset width and length when area is manually changed
                             form.setValue(`buildingElements.${elementId}.width`, null)
                             form.setValue(`buildingElements.${elementId}.length`, null)
                           }}
@@ -282,34 +281,36 @@ export function CreateProjectModal({
                     </FormItem>
                   )}
                 />
-              </div>
-              <FormField
-                control={form.control}
-                name={`buildingElements.${elementId}.buildupId`}
-                render={({ field }) => (
-                  <FormItem>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select build-up" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {buildUps.map((buildup) => (
-                          <SelectItem key={buildup.id} value={buildup.id}>
-                            {buildup.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-            </div>
-          )}
+                <FormField
+                  control={form.control}
+                  name={`buildingElements.${elementId}.buildupId`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select build-up" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {buildUps.map((buildup) => (
+                            <SelectItem key={buildup.id} value={buildup.id}>
+                              {buildup.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </>
+            ) : (
+              <div className="col-span-4" />
+            )}
+          </div>
           {hasChildren && isExpanded && (
             <div className="ml-4">
               {renderBuildingElements(value, elementId)}
@@ -322,7 +323,7 @@ export function CreateProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{steps[currentStep - 1].name}</DialogTitle>
         </DialogHeader>
@@ -624,6 +625,13 @@ export function CreateProjectModal({
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="rounded-lg border p-4">
+                  <div className="grid grid-cols-[2fr,1fr,1fr,1fr,2fr] gap-4 mb-4 px-4">
+                    <div className="font-medium text-sm">Category</div>
+                    <div className="font-medium text-sm">Width (m)</div>
+                    <div className="font-medium text-sm">Length (m)</div>
+                    <div className="font-medium text-sm">Area (m²)</div>
+                    <div className="font-medium text-sm">Build-up</div>
+                  </div>
                   {renderBuildingElements(nrmData)}
                 </div>
               </div>
