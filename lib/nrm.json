@@ -1,0 +1,163 @@
+{
+    "0 Pre-work": {
+        "0.1 Treatment, demolition and facilitating works": {
+            "0.1.1 Toxic/contaminated material treatment\nDemolition works": {
+                "0.1.1.2 Demolition works": {}
+            },
+            "0.1.2 Facilitating works": {
+                "0.1.2.1 Temporary supports": {},
+                "0.1.2.2 Facade retention": {},
+                "0.1.2.3 Specialist groundworks": {},
+                "0.1.2.4 Temporary diversion works": {},
+                "0.1.2.5 Extraordinary site investigations": {},
+                "0.1.2.6  Site preparation works": {}
+            }
+        }
+    },
+    "1 Sub-structure": {
+        "1.1 Foundations and piling": {},
+        "1.2 Basement retaining walls and lowest slab": {
+            "1.2.1 Lowest slab": {},
+            "1.2.2 Suspended slabs ": {},
+            "1.2.3 Basement retaining walls": {}
+        }
+    },
+    "2 Super structure": {
+        "2.1 Frame\n": {
+            "2.1.1 Frame (vertical)  - columns/ structural walls & braces": {},
+            "2.1.2 Frame (Horizontal) - beams, joists & braces": {}
+        },
+        "2.2 Upper floors, 2.3 Roof": {
+            "2.2.1 Upper floor and roof - structural slabs": {},
+            "2.2.2 Upper floor and roof - non-structural slabs": {}
+        },
+        "2.4 Stairs, ramps and safety guarding": {
+            "2.4.1 Stairs": {},
+            "2.4.2 Ramps": {},
+            "2.4.3 Safety and access ladders, chutes, slides and guarding": {}
+        },
+        "2.5 External envelope including roof finishes\n": {
+            "2.5.1 External - opaque envelope ": {},
+            "2.5.2 External - full height glazing systems": {},
+            "2.5.3 External - roof finishes/coverings": {},
+            "2.5.4 External - safety systems": {}
+        },
+        "2.6 Windows and ext doors": {
+            "2.6.1  Windows - vertical": {},
+            "2.6.2 Windows - roof or horizontal": {},
+            "2.6.3 External doors": {}
+        },
+        "2.7 Internal walls and partitions\n": {
+            "2.7.1 Internal walls  -solid": {},
+            "2.7.2 Internal walls  - non-structural glazed walls, windows and vision panels": {}
+        },
+        "2.8 Internal doors": {}
+    },
+    "3 Finishes\n": {
+        "3.1 Wall finishes\n": {},
+        "3.2 Floor finishes": {
+            "3.2.1 Raised access floor or specialist sprung floors": {},
+            "3.2.2 Non-structural screed": {},
+            "3.2.3 Floor finishes": {}
+        },
+        "3.3 Ceiling finishes": {}
+    },
+    "4 FF&E": {
+        "4.1 General FF&E": {},
+        "4.2 Kitchen equipment": {},
+        "4.3  Special equipment": {},
+        "4.4 Loose FF&E": {},
+        "4.5 IT": {},
+        "4.6 Audio and visual": {}
+    },
+    "5 MEP": {
+        "5.1 Public Health": {
+            "5.1.1 Sanitaryware": {},
+            "5.1.2  Cold water systems": {
+                "5.1.2.1  Cold water systems": {},
+                "5.1.2.2  Cold water storage": {}
+            },
+            "5.1.3  Drainage and rainwater": {
+                "5.1.3.1 Surface water/rainwater/foul water drainage": {},
+                "5.1.3.2 Water reuse systems": {}
+            }
+        },
+        "5.2  Heating, Ventilation and Cooling (HVAC)": {
+            "5.2.1 Space heating and hot water": {
+                "5.2.1.1 Heat & Hot water generation equipment": {},
+                "5.2.1.2 Heat & hot water distribution, control, ancillaries, emitters, exchangers/  terminal units": {},
+                "5.2.1.3 Heat storage equipment": {}
+            },
+            "5.2.2 Dedicated cooling installations\n\n(If the system does both heating and cooling, include it in heating)": {
+                "5.2.2.1  Cooling generation equipment": {}
+            },
+            "5.2.2 Dedicated cooling installations": {
+                "5.2.2.2 Cooling emitter, exchangers/ terminal units, ancillaries and control, distribution, storage": {}
+            },
+            "5.2.3 Air movement": {},
+            "5.2.4 Ventilation air terminals, ductwork and ancillaries, control dampers, attenuation, fire safety related to ventilation equipment": {
+                "5.2.4.1 Air terminals\n": {},
+                "5.2.4.2 Ductwork & ancilleries  ": {},
+                "5.2.4.3 Control dampers, attenuation and fIre safety related to ventilation equipment": {}
+            }
+        },
+        "5.3 Electrical installations ": {
+            "5.3.1 Lighting": {
+                "5.3.1.1 Internal lighting": {},
+                "5.3.1.2 External lighting (building mounted)": {},
+                "5.3.1.3 Emergency lighting": {},
+                "5.3.1.4 Other lighting": {}
+            },
+            "5.3.2 Electrical services for power, communications, security, IT and fire detection": {
+                "5.3.2.1 Electrical power": {},
+                "5.3.2.2 ELV/ Communications/Security": {},
+                "5.3.2.3 IT & Data": {},
+                "5.3.2.4 BMS": {},
+                "5.3.2.5 Electricity back up generation": {},
+                "5.3.2.6  Fire detection & alarm": {}
+            }
+        },
+        "5.4 On site renewable energy generation": {
+            "5.4.1 On site renewable energy generation": {
+                "5.4.1.1 Renewable energy - electrical generation onsite and building mounted": {},
+                "5.4.1.2 Renewable energy - storage onsite": {}
+            }
+        },
+        "5.5 Systems including Life safety, Fuel installations, Lift and conveyor installations, Services equipment\nDisposal installations, Specialist installations, Builders work in connection with services": {
+            "5.5.1 Life safety": {
+                "5.5.1.1 Sprinkler system": {},
+                "5.5.1.2 Fire fighting systems": {},
+                "5.5.1.3 Lightning protection/earth bonding": {}
+            },
+            "5.5.2 Fuel installations": {
+                "5.5.2 Fuel installations": {}
+            },
+            "5.5.3 Lift and conveyor installations": {
+                "5.5.3.1 Lift, stair lift, lifting platform": {},
+                "5.5.3.2 Escalators and moving walkways": {}
+            },
+            "5.5.4 Specialised and communal waste disposal": {},
+            "5.5.5 Specialist installations & maintenance": {},
+            "5.5.6 Builders work in connection with services": {}
+        }
+    },
+    "6 Pre-fabricated buildings and units": {},
+    "7 Works to existing buildings": {
+        "7.1 Alterations\n": {},
+        "7.2 Repairs to existing \nCleaning existing surfaces\nGeneral Renovation works": {},
+        "7.3 Damp-proof courses/fungus and beetle eradication": {}
+    },
+    "8 External Works": {
+        "8.1\nRoads, paths, pavings, surfaces\nFencing, railings, walls\nExternal fixtures": {
+            "8.1.1 Roads, paths, pavings, surfaces": {},
+            "8.1.2 Fencing, railings, walls": {},
+            "8.1.3 External fixtures": {}
+        },
+        "8.2 Soft landscape, planting, irrigation": {},
+        "8.3 External drainage\nExternal services\nMinor building works": {
+            "8.3.1 External drainage": {},
+            "8.3.2 External services": {},
+            "8.3.3 Minor building works, ancillary": {}
+        }
+    }
+}

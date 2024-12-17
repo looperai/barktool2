@@ -32,10 +32,30 @@ export function DraggableCompareButton() {
     // Load saved position from localStorage or set to middle of screen
     const savedPosition = localStorage.getItem('compareButtonPosition')
     if (savedPosition) {
-      setPosition(JSON.parse(savedPosition))
+      try {
+        const parsed = JSON.parse(savedPosition)
+        // Validate the position is within viewport bounds
+        const validY = Math.max(100, Math.min(window.innerHeight - 100, parsed.y))
+        setPosition({ y: validY })
+      } catch (error) {
+        // If parsing fails or position is invalid, reset to middle of screen
+        setPosition({ y: window.innerHeight / 2 })
+        localStorage.removeItem('compareButtonPosition')
+      }
     } else {
       setPosition({ y: window.innerHeight / 2 })
     }
+
+    // Add resize handler to keep button in viewport
+    const handleResize = () => {
+      setPosition(prev => {
+        const validY = Math.max(100, Math.min(window.innerHeight - 100, prev.y))
+        return { y: validY }
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   useEffect(() => {
