@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Project } from "@/components/app-sidebar"
+import { Project, BuildingElement } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { CreateProjectModal } from "@/components/create-project-modal"
 import { FolderKanban, Plus, Building2, MapPin, Hash, Trash2 } from "lucide-react"
@@ -26,22 +26,50 @@ export default function ProjectsPage() {
     setProjects(savedProjects)
   }, [])
 
-  const handleCreateProject = (project: Omit<Project, 'id'>) => {
+  const handleCreateProject = (data: Omit<Project, "id" | "versions"> & { buildingElements?: Record<string, BuildingElement> }) => {
+    // Extract buildingElements from the data
+    const { buildingElements, ...projectData } = data
+    
+    console.log('Received project data:', data)
+    console.log('Building elements:', buildingElements)
+
+    // Create the new project with initial version
     const newProject: Project = {
-      ...project,
-      id: Math.random().toString(),
+      ...projectData,
+      id: crypto.randomUUID(),
+      versions: [{
+        id: crypto.randomUUID(),
+        name: 'Version 1',
+        buildingElements: buildingElements || {}
+      }]
     }
 
+    console.log('New project to be saved:', newProject)
+    console.log('Building elements in new project:', newProject.versions[0].buildingElements)
+
     const updatedProjects = [...projects, newProject]
+    console.log('Updated projects array:', updatedProjects)
+    
     setProjects(updatedProjects)
     localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    
+    // Verify data was saved correctly
+    const savedProjects = JSON.parse(localStorage.getItem('projects') || '[]')
+    console.log('Projects after saving to localStorage:', savedProjects)
+    console.log('Building elements in saved project:', savedProjects[savedProjects.length - 1].versions[0].buildingElements)
+    
+    window.dispatchEvent(new Event('projectsUpdated'))
     setShowCreateModal(false)
+
+    // Navigate to the first version of the new project
+    window.location.href = `/projects/${newProject.id}/versions/${newProject.versions[0].id}`
   }
 
   const handleDeleteProject = (project: Project) => {
     const updatedProjects = projects.filter(p => p.id !== project.id)
     setProjects(updatedProjects)
     localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    window.dispatchEvent(new Event('projectsUpdated'))
     setProjectToDelete(null)
   }
 
