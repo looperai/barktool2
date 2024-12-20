@@ -1,8 +1,8 @@
 "use client"
 
-import { Home, Library, FolderKanban, Plus, ChevronRight, ChevronDown } from 'lucide-react'
+import { Home, Library, FolderKanban, Plus, ChevronRight, ChevronDown, MoreVertical, Pencil, Trash2, Copy } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   Sidebar,
@@ -24,6 +24,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
 
 export interface BuildingElement {
   id: string
@@ -80,10 +97,15 @@ const navigation = [
 export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar()
   const pathname = usePathname()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
+  const [editingProject, setEditingProject] = useState<{ id: string; name: string } | null>(null)
+  const [deleteProject, setDeleteProject] = useState<Project | null>(null)
+  const [editingVersion, setEditingVersion] = useState<{ projectId: string; versionId: string; name: string } | null>(null)
+  const [deleteVersion, setDeleteVersion] = useState<{ project: Project; version: Project['versions'][0] } | null>(null)
 
   // Function to load projects from localStorage
   const loadProjects = () => {
@@ -171,11 +193,62 @@ export function AppSidebar() {
     
     setShowCreateModal(false)
 
-    // Navigate to the first version page
-    window.location.href = `/projects/${newProjectId}/versions/${newVersionId}`
+    // Use router.push instead of window.location.href
+    router.push(`/projects/${newProjectId}/versions/${newVersionId}`)
   }
 
-  // Function to toggle project expansion
+  const handleRenameProject = (projectId: string, newName: string) => {
+    const updatedProjects = projects.map(project => {
+      if (project.id === projectId) {
+        return { ...project, name: newName }
+      }
+      return project
+    })
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    setProjects(updatedProjects)
+    setEditingProject(null)
+    window.dispatchEvent(new Event('projectsUpdated'))
+  }
+
+  const handleDuplicateProject = (project: Project) => {
+    // Generate a unique name for the duplicate project
+    const baseName = `Copy of ${project.name}`
+    const existingNames = projects.map(p => p.name)
+    let counter = 1
+    let uniqueName = baseName
+    
+    while (existingNames.includes(uniqueName)) {
+      counter++
+      uniqueName = `${baseName} (${counter})`
+    }
+
+    const newProject = {
+      ...project,
+      id: crypto.randomUUID(),
+      name: uniqueName,
+      versions: project.versions.map(version => ({
+        ...version,
+        id: crypto.randomUUID()
+      }))
+    }
+    const updatedProjects = [...projects, newProject]
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    setProjects(updatedProjects)
+    window.dispatchEvent(new Event('projectsUpdated'))
+  }
+
+  const handleDeleteProject = (project: Project) => {
+    // Close dialog first
+    setDeleteProject(null)
+    
+    // Update localStorage first
+    const updatedProjects = projects.filter(p => p.id !== project.id)
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    
+    // Force a page reload to ensure clean state
+    window.location.reload()
+  }
+
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
       const next = new Set(prev)
@@ -184,8 +257,7 @@ export function AppSidebar() {
       } else {
         next.add(projectId)
       }
-      // Save to localStorage
-      localStorage.setItem('expandedProjects', JSON.stringify([...next]))
+      localStorage.setItem('expandedProjects', JSON.stringify(Array.from(next)))
       return next
     })
   }
@@ -204,6 +276,83 @@ export function AppSidebar() {
       })
     }
   }, [activeProjectId])
+
+  const handleRenameVersion = (projectId: string, versionId: string, newName: string) => {
+    const updatedProjects = projects.map(project => {
+      if (project.id === projectId) {
+        return {
+          ...project,
+          versions: project.versions.map(version => {
+            if (version.id === versionId) {
+              return { ...version, name: newName }
+            }
+            return version
+          })
+        }
+      }
+      return project
+    })
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    setProjects(updatedProjects)
+    setEditingVersion(null)
+    window.dispatchEvent(new Event('projectsUpdated'))
+  }
+
+  const handleDuplicateVersion = (project: Project, version: Project['versions'][0]) => {
+    // Generate a unique name for the duplicate version
+    const baseName = `Copy of ${version.name}`
+    const existingNames = project.versions.map(v => v.name)
+    let counter = 1
+    let uniqueName = baseName
+    
+    while (existingNames.includes(uniqueName)) {
+      counter++
+      uniqueName = `${baseName} (${counter})`
+    }
+
+    const newVersion = {
+      ...version,
+      id: crypto.randomUUID(),
+      name: uniqueName
+    }
+    const updatedProjects = projects.map(p => {
+      if (p.id === project.id) {
+        return {
+          ...p,
+          versions: [...p.versions, newVersion]
+        }
+      }
+      return p
+    })
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    setProjects(updatedProjects)
+    window.dispatchEvent(new Event('projectsUpdated'))
+  }
+
+  const handleDeleteVersion = (project: Project, version: Project['versions'][0]) => {
+    if (project.versions.length === 1) {
+      alert('Cannot delete the last version of a project')
+      return
+    }
+
+    // Close dialog first
+    setDeleteVersion(null)
+    
+    // Update localStorage first
+    const updatedProjects = projects.map(p => {
+      if (p.id === project.id) {
+        return {
+          ...p,
+          versions: p.versions.filter(v => v.id !== version.id)
+        }
+      }
+      return p
+    })
+    localStorage.setItem('projects', JSON.stringify(updatedProjects))
+    
+    // Force a page reload to ensure clean state
+    window.location.reload()
+  }
 
   if (!mounted) return null
 
@@ -324,46 +473,148 @@ export function AppSidebar() {
 
                         return (
                           <div key={project.id} className="space-y-1">
-                            <div className="flex items-center">
-                              <button
-                                onClick={() => toggleProject(project.id)}
-                                className={cn(
-                                  "p-1 rounded-sm transition-colors duration-200",
-                                  isProjectActive ? "text-primary hover:bg-primary/10" : "hover:bg-accent/50",
-                                )}
-                              >
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
+                            <div className="flex items-center justify-between hover:bg-accent/50 rounded-md group/project">
+                              <div className="flex items-center w-full">
+                                <button
+                                  onClick={() => toggleProject(project.id)}
+                                  className="p-2"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                  )}
+                                </button>
+                                {editingProject?.id === project.id ? (
+                                  <Input
+                                    value={editingProject.name}
+                                    onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleRenameProject(project.id, editingProject.name)
+                                      } else if (e.key === 'Escape') {
+                                        setEditingProject(null)
+                                      }
+                                    }}
+                                    onBlur={() => handleRenameProject(project.id, editingProject.name)}
+                                    className="h-6 w-full"
+                                    autoFocus
+                                  />
                                 ) : (
-                                  <ChevronRight className="h-4 w-4" />
+                                  <Link
+                                    href={`/projects/${project.id}`}
+                                    className={cn(
+                                      "flex-1 px-2 py-1.5 rounded-md",
+                                      pathname === `/projects/${project.id}` && "bg-accent"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "truncate font-medium text-sm",
+                                      pathname.includes(`/projects/${project.id}`) ? "text-primary" : "text-foreground"
+                                    )}>
+                                      {project.name}
+                                    </span>
+                                  </Link>
                                 )}
-                              </button>
-                              <Link
-                                href={`/projects/${project.id}`}
-                                className={cn(
-                                  "flex-1 py-1 px-2 text-sm rounded-sm transition-all duration-200",
-                                  pathname === `/projects/${project.id}` 
-                                    ? "bg-primary/10 text-primary font-medium shadow-sm" 
-                                    : "hover:bg-accent/50"
-                                )}
-                              >
-                                {project.name}
-                              </Link>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 opacity-0 group-hover/project:opacity-100"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setEditingProject({ id: project.id, name: project.name })}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Rename
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDuplicateProject(project)}>
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    Duplicate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setDeleteProject(project)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            {isExpanded && project.versions?.map(version => (
-                              <Link
-                                key={version.id}
-                                href={`/projects/${project.id}/versions/${version.id}`}
-                                className={cn(
-                                  "block py-1 px-2 pl-7 text-sm rounded-sm transition-all duration-200",
-                                  pathname.includes(`/projects/${project.id}/versions/${version.id}`)
-                                    ? "bg-primary/10 text-primary font-medium shadow-sm" 
-                                    : "hover:bg-accent/50",
-                                )}
-                              >
-                                {version.name}
-                              </Link>
-                            ))}
+                            {expandedProjects.has(project.id) && (
+                              <div className="ml-4 space-y-1">
+                                {project.versions.map((version) => (
+                                  <div key={version.id} className="flex items-center justify-between hover:bg-accent/50 rounded-md group/version">
+                                    {editingVersion?.versionId === version.id ? (
+                                      <Input
+                                        value={editingVersion.name}
+                                        onChange={(e) => setEditingVersion({ ...editingVersion, name: e.target.value })}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            handleRenameVersion(project.id, version.id, editingVersion.name)
+                                          } else if (e.key === 'Escape') {
+                                            setEditingVersion(null)
+                                          }
+                                        }}
+                                        onBlur={() => handleRenameVersion(project.id, version.id, editingVersion.name)}
+                                        className="h-6 w-full"
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <Link
+                                        href={`/projects/${project.id}/versions/${version.id}`}
+                                        className={cn(
+                                          "flex items-center gap-2 px-2 py-1.5 rounded-md w-full",
+                                          pathname === `/projects/${project.id}/versions/${version.id}` && "bg-accent"
+                                        )}
+                                      >
+                                        <span className={cn(
+                                          "truncate text-sm",
+                                          pathname === `/projects/${project.id}/versions/${version.id}` 
+                                            ? "text-primary font-medium" 
+                                            : "text-muted-foreground"
+                                        )}>
+                                          {version.name}
+                                        </span>
+                                      </Link>
+                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 opacity-0 group-hover/version:opacity-100"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setEditingVersion({ projectId: project.id, versionId: version.id, name: version.name })}>
+                                          <Pencil className="mr-2 h-4 w-4" />
+                                          Rename
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDuplicateVersion(project, version)}>
+                                          <Copy className="mr-2 h-4 w-4" />
+                                          Duplicate
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() => setDeleteVersion({ project, version })}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )
                       })}
@@ -376,6 +627,44 @@ export function AppSidebar() {
         </SidebarContent>
         <SidebarRail />
       </Sidebar>
+      <AlertDialog open={!!deleteProject} onOpenChange={() => setDeleteProject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteProject?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteProject && handleDeleteProject(deleteProject)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deleteVersion} onOpenChange={() => setDeleteVersion(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Version</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteVersion?.version.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteVersion && handleDeleteVersion(deleteVersion.project, deleteVersion.version)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
