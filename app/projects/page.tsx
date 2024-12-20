@@ -144,7 +144,8 @@ export default function ProjectsPage() {
             {projects.map(project => (
               <div
                 key={project.id}
-                className="group relative overflow-hidden rounded-lg border bg-card text-card-foreground transition-all hover:shadow-lg hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-lg border bg-card text-card-foreground transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+                onClick={() => window.location.href = `/projects/${project.id}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
                 <div className="relative p-6 flex flex-col min-h-[320px]">
@@ -158,7 +159,7 @@ export default function ProjectsPage() {
                         size="icon"
                         className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
-                          e.preventDefault()
+                          e.stopPropagation() // Prevent navigation when clicking delete
                           setProjectToDelete(project)
                         }}
                       >
