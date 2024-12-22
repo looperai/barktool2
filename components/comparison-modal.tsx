@@ -192,21 +192,64 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
         return isBuildUpItem(item)
       }
     })
-    .map(item => {
+    .map((item, index) => {
       if (isMaterialItem(item)) {
         return {
-          name: item.name,
-          "ECF, inc biogenic": item.ecfIncBiogenic,
-          "ECF biogenic": item.ecfBiogenic,
+          name: `${index + 1}`,
+          fullName: item.name,
+          "ECF, exc biogenic": Math.abs(item.ecfIncBiogenic - item.ecfBiogenic),
+          "ECF biogenic": -Math.abs(item.ecfBiogenic),
         }
       } else {
         return {
-          name: item.name,
-          "Total A1-A3, inc biogenic": item.ecfIncBiogenic,
-          "Total A1-A3 biogenic": item.ecfBiogenic,
+          name: `${index + 1}`,
+          fullName: item.name,
+          "Product stage carbon": Math.abs(item.ecfIncBiogenic - item.ecfBiogenic),
+          "Biogenic carbon": -Math.abs(item.ecfBiogenic),
         }
       }
     })
+
+  const CustomBarLabel = ({ x, y, width, height, value, viewBox }: any) => {
+    // Only show label if bar height is significant enough
+    if (Math.abs(height) < 15) return null;
+    
+    const xPos = x + width / 2;
+    const yPos = y + (height > 0 ? height / 2 : height / 2);
+    const isNegative = value < 0;
+    
+    return (
+      <text
+        x={xPos}
+        y={yPos}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize={12}
+        fill="#fff"
+      >
+        {isNegative ? '-' : ''}{Math.abs(value).toFixed(2)}
+      </text>
+    );
+  };
+
+  // Create mapping legend component
+  const MappingLegend = () => (
+    <div className="mt-6 border rounded-lg p-4 bg-muted/30">
+      <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Item Reference</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
+        {barData.map((item, index) => (
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+              <span className="text-xs font-medium">{index + 1}</span>
+            </div>
+            <span className="truncate text-muted-foreground hover:text-foreground transition-colors" title={item.fullName}>
+              {item.fullName}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   // Add this function for text wrapping
   const CustomXAxisTick = ({ x, y, payload }: any) => {
@@ -411,6 +454,7 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
                       <BarChart 
                         data={barData}
                         margin={{ top: 20, right: 120, bottom: 20, left: 120 }}
+                        stackOffset="sign"
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis 
@@ -418,8 +462,7 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
                           interval={0}
                           axisLine={true}
                           tickLine={true}
-                          tick={false}
-                          height={20}
+                          height={30}
                         />
                         <YAxis 
                           label={{ 
@@ -429,10 +472,32 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
                             style: { textAnchor: 'middle' },
                             offset: -20
                           }}
+                          tickFormatter={(value) => value < 0 ? `-${Math.abs(value).toFixed(2)}` : Math.abs(value).toFixed(2)}
                           tickMargin={5}
                           width={80}
                         />
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const item = barData.find(d => d.name === label);
+                              return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-sm font-medium text-foreground">
+                                      {item?.fullName}
+                                    </span>
+                                    {payload.map((item: any, index: number) => (
+                                      <span key={index} className="text-sm text-foreground">
+                                        {item.name}: {Math.abs(item.value).toFixed(4)} kgCO2e/kg
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
                         <Legend 
                           verticalAlign="top"
                           align="right"
@@ -442,32 +507,41 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
                         {type === "materials" ? (
                           <>
                             <Bar 
-                              dataKey="ECF, inc biogenic" 
-                              fill="hsl(var(--muted-foreground))" 
-                              name="ECF, inc biogenic"
+                              name="ECF, exc biogenic"
+                              dataKey="ECF, exc biogenic"
+                              fill="hsl(var(--muted-foreground))"
+                              stackId="stack"
+                              label={<CustomBarLabel />}
                             />
                             <Bar 
-                              dataKey="ECF biogenic" 
-                              fill="hsl(142.1 76.2% 36.3%)" 
                               name="ECF biogenic"
+                              dataKey="ECF biogenic"
+                              fill="hsl(142.1 76.2% 36.3%)"
+                              stackId="stack"
+                              label={<CustomBarLabel />}
                             />
                           </>
                         ) : (
                           <>
                             <Bar 
-                              dataKey="Total A1-A3, inc biogenic" 
-                              fill="hsl(var(--muted-foreground))" 
-                              name="Total A1-A3, inc biogenic"
+                              name="Product stage carbon"
+                              dataKey="Product stage carbon"
+                              fill="hsl(var(--muted-foreground))"
+                              stackId="stack"
+                              label={<CustomBarLabel />}
                             />
                             <Bar 
-                              dataKey="Total A1-A3 biogenic" 
-                              fill="hsl(142.1 76.2% 36.3%)" 
-                              name="Total A1-A3 biogenic"
+                              name="Biogenic carbon"
+                              dataKey="Biogenic carbon"
+                              fill="hsl(142.1 76.2% 36.3%)"
+                              stackId="stack"
+                              label={<CustomBarLabel />}
                             />
                           </>
                         )}
                       </BarChart>
                     </ResponsiveContainer>
+                    <MappingLegend />
                   </div>
                 </div>
               ) : (
