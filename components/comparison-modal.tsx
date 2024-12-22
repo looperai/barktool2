@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { materials, Material } from "@/lib/database"
 import { SavedBuildUp } from "@/app/library/buildups/types"
+import html2canvas from 'html2canvas'
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts"
-import { Check, X, ChevronRight, ChevronDown } from "lucide-react"
+import { Check, X, ChevronRight, ChevronDown, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -85,6 +86,7 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Clear selections when modal opens
   useEffect(() => {
@@ -233,23 +235,33 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
   };
 
   // Create mapping legend component
-  const MappingLegend = () => (
-    <div className="mt-6 border rounded-lg p-4 bg-muted/30">
-      <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Item Reference</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
-        {barData.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 text-sm">
-            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-              <span className="text-xs font-medium">{index + 1}</span>
+  const MappingLegend = () => {
+    return (
+      <div className="border rounded-lg p-4 bg-muted/30">
+        <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Item Reference</h3>
+        <div className="grid grid-cols-3 gap-x-8 gap-y-3">
+          {barData.map((item, index) => (
+            <div key={index} className="flex items-center gap-3 min-h-[24px]">
+              <div className="relative flex-shrink-0 w-6 h-6">
+                <div className="absolute inset-0 rounded-full bg-[rgb(241,245,249)]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {index + 1}
+                  </span>
+                </div>
+              </div>
+              <span 
+                className="truncate text-muted-foreground hover:text-foreground transition-colors text-sm leading-6"
+                title={item.fullName}
+              >
+                {item.fullName}
+              </span>
             </div>
-            <span className="truncate text-muted-foreground hover:text-foreground transition-colors" title={item.fullName}>
-              {item.fullName}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Add this function for text wrapping
   const CustomXAxisTick = ({ x, y, payload }: any) => {
@@ -280,11 +292,67 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
     setSelectedItems(prev => prev.filter(item => item.id !== itemToRemove.id))
   }
 
+  const handleDownload = async () => {
+    if (chartRef.current) {
+      try {
+        // Create a temporary container with fixed dimensions
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.width = '1200px'; // Fixed width
+        document.body.appendChild(tempContainer);
+
+        // Clone the chart content
+        const clone = chartRef.current.cloneNode(true) as HTMLElement;
+        clone.style.width = '1200px';
+        clone.style.height = 'auto';
+        clone.style.position = 'static';
+        clone.style.transform = 'none';
+        tempContainer.appendChild(clone);
+
+        // Wait for content to render
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const canvas = await html2canvas(clone, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false,
+          width: 1200,
+          height: clone.offsetHeight,
+          windowWidth: 1200,
+          windowHeight: clone.offsetHeight
+        });
+
+        // Clean up
+        document.body.removeChild(tempContainer);
+        
+        const image = canvas.toDataURL('image/jpeg', 1.0);
+        const link = document.createElement('a');
+        link.download = `carbon-comparison-${new Date().toISOString().split('T')[0]}.jpg`;
+        link.href = image;
+        link.click();
+      } catch (err) {
+        console.error('Error generating image:', err);
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl min-h-[600px] h-[80vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between space-x-4 pr-12">
           <DialogTitle>Compare</DialogTitle>
+          {barData.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleDownload}
+            >
+              <Download className="h-4 w-4" />
+              Download Chart
+            </Button>
+          )}
         </DialogHeader>
 
         <Tabs 
@@ -449,99 +517,110 @@ export function ComparisonModal({ open, onOpenChange }: ComparisonModalProps) {
             <div className="flex-1 mt-4 min-h-0">
               {barData.length > 0 ? (
                 <div className="h-full overflow-x-auto">
-                  <div style={{ minWidth: `${Math.max(800, barData.length * 100)}px`, height: "100%" }}>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart 
-                        data={barData}
-                        margin={{ top: 20, right: 120, bottom: 20, left: 120 }}
-                        stackOffset="sign"
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name"
-                          interval={0}
-                          axisLine={true}
-                          tickLine={true}
-                          height={30}
-                        />
-                        <YAxis 
-                          label={{ 
-                            value: 'kgCO2e/kg', 
-                            angle: -90, 
-                            position: 'insideLeft',
-                            style: { textAnchor: 'middle' },
-                            offset: -20
-                          }}
-                          tickFormatter={(value) => value < 0 ? `-${Math.abs(value).toFixed(2)}` : Math.abs(value).toFixed(2)}
-                          tickMargin={5}
-                          width={80}
-                        />
-                        <Tooltip 
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              const item = barData.find(d => d.name === label);
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-sm font-medium text-foreground">
-                                      {item?.fullName}
-                                    </span>
-                                    {payload.map((item: any, index: number) => (
-                                      <span key={index} className="text-sm text-foreground">
-                                        {item.name}: {Math.abs(item.value).toFixed(4)} kgCO2e/kg
+                  <div 
+                    ref={chartRef}
+                    className="bg-white p-6 rounded-lg flex flex-col"
+                    style={{ 
+                      minWidth: `${Math.max(800, barData.length * 100)}px`,
+                      width: '100%'
+                    }}
+                  >
+                    <div className="h-[400px] mb-6">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={barData}
+                          margin={{ top: 20, right: 120, bottom: 20, left: 120 }}
+                          stackOffset="sign"
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name"
+                            interval={0}
+                            axisLine={true}
+                            tickLine={true}
+                            height={30}
+                          />
+                          <YAxis 
+                            label={{ 
+                              value: 'kgCO2e/kg', 
+                              angle: -90, 
+                              position: 'insideLeft',
+                              style: { textAnchor: 'middle' },
+                              offset: -20
+                            }}
+                            tickFormatter={(value) => value < 0 ? `-${Math.abs(value).toFixed(2)}` : Math.abs(value).toFixed(2)}
+                            tickMargin={5}
+                            width={80}
+                          />
+                          <Tooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const item = barData.find(d => d.name === label);
+                                return (
+                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-sm font-medium text-foreground">
+                                        {item?.fullName}
                                       </span>
-                                    ))}
+                                      {payload.map((item: any, index: number) => (
+                                        <span key={index} className="text-sm text-foreground">
+                                          {item.name}: {Math.abs(item.value).toFixed(4)} kgCO2e/kg
+                                        </span>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Legend 
-                          verticalAlign="top"
-                          align="right"
-                          layout="vertical"
-                          wrapperStyle={{ paddingLeft: "20px" }}
-                        />
-                        {type === "materials" ? (
-                          <>
-                            <Bar 
-                              name="ECF, exc biogenic"
-                              dataKey="ECF, exc biogenic"
-                              fill="hsl(var(--muted-foreground))"
-                              stackId="stack"
-                              label={<CustomBarLabel />}
-                            />
-                            <Bar 
-                              name="ECF biogenic"
-                              dataKey="ECF biogenic"
-                              fill="hsl(142.1 76.2% 36.3%)"
-                              stackId="stack"
-                              label={<CustomBarLabel />}
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <Bar 
-                              name="Product stage carbon"
-                              dataKey="Product stage carbon"
-                              fill="hsl(var(--muted-foreground))"
-                              stackId="stack"
-                              label={<CustomBarLabel />}
-                            />
-                            <Bar 
-                              name="Biogenic carbon"
-                              dataKey="Biogenic carbon"
-                              fill="hsl(142.1 76.2% 36.3%)"
-                              stackId="stack"
-                              label={<CustomBarLabel />}
-                            />
-                          </>
-                        )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <MappingLegend />
+                                )
+                              }
+                              return null
+                            }}
+                          />
+                          <Legend 
+                            verticalAlign="top"
+                            align="right"
+                            layout="vertical"
+                            wrapperStyle={{ paddingLeft: "20px" }}
+                          />
+                          {type === "materials" ? (
+                            <>
+                              <Bar 
+                                name="ECF, exc biogenic"
+                                dataKey="ECF, exc biogenic"
+                                fill="hsl(var(--muted-foreground))"
+                                stackId="stack"
+                                label={<CustomBarLabel />}
+                              />
+                              <Bar 
+                                name="ECF biogenic"
+                                dataKey="ECF biogenic"
+                                fill="hsl(142.1 76.2% 36.3%)"
+                                stackId="stack"
+                                label={<CustomBarLabel />}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <Bar 
+                                name="Product stage carbon"
+                                dataKey="Product stage carbon"
+                                fill="hsl(var(--muted-foreground))"
+                                stackId="stack"
+                                label={<CustomBarLabel />}
+                              />
+                              <Bar 
+                                name="Biogenic carbon"
+                                dataKey="Biogenic carbon"
+                                fill="hsl(142.1 76.2% 36.3%)"
+                                stackId="stack"
+                                label={<CustomBarLabel />}
+                              />
+                            </>
+                          )}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="w-full">
+                      <MappingLegend />
+                    </div>
                   </div>
                 </div>
               ) : (
