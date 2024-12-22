@@ -32,6 +32,7 @@ import { BuildUpChart } from "./build-up-chart"
 interface BuildUpFormProps {
   initialData?: SavedBuildUp | null
   isEditing?: boolean
+  initialName?: string
 }
 
 interface ContextMenuPosition {
@@ -40,10 +41,10 @@ interface ContextMenuPosition {
   rowId: string | null;
 }
 
-export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildUpFormProps) {
+export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialName }: BuildUpFormProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [buildUpName, setBuildUpName] = useState(initialData?.name || "")
+  const [buildUpName, setBuildUpName] = useState("")
   const [buildUpItems, setBuildUpItems] = useState<BuildUpItem[]>(initialData?.items || [])
   const [isEditing, setIsEditing] = useState(defaultIsEditing || false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -58,11 +59,10 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    setBuildUpName(initialName || initialData?.name || "")
+  }, [initialName, initialData])
 
   useEffect(() => {
-    setBuildUpName(initialData?.name || "")
-    
     // Calculate a1a3ExcBiogenic for existing items
     const updatedItems = (initialData?.items || []).map(item => ({
       ...item,
@@ -169,6 +169,30 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
   useEffect(() => {
     setHasChanges(false);
   }, [isEditing]);
+
+  // Add new function to calculate carbon values
+  const calculateCarbonValues = () => {
+    let productStageCarbon = 0;
+    let biogenicCarbon = 0;
+
+    buildUpItems.forEach(item => {
+      const material = materials.find(m => m.iceDbName === item.material);
+      if (material) {
+        // Convert thickness from mm to m (divide by 1000)
+        // Multiply by density (kg/m³) to get mass per m²
+        const mass = (material.density * (item.thickness / 1000)); // Result in kg/m²
+        productStageCarbon += mass * (item.a1a3IncBiogenic - item.a1a3Biogenic); // Result in kgCO2e/m²
+        biogenicCarbon += mass * item.a1a3Biogenic; // Result in kgCO2e/m²
+      }
+    });
+
+    return {
+      productStageCarbon: Number(productStageCarbon.toFixed(3)),
+      biogenicCarbon: Number(biogenicCarbon.toFixed(3))
+    };
+  };
+
+  const carbonValues = calculateCarbonValues();
 
   if (!mounted) {
     return null
@@ -521,16 +545,15 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
         <div className="bg-[#f9fafb] border-b">
           <div className="flex items-center justify-between gap-2 px-6 pt-6 pb-3">
             <div className="flex items-center gap-2">
-              <Input
-                placeholder="Build-up Name"
-                value={buildUpName}
-                onChange={(e) => setBuildUpName(e.target.value)}
-                disabled={!isEditing}
-                className={cn(
-                  "w-[300px]",
-                  isEditing && "bg-white"
-                )}
-              />
+              {isEditing ? (
+                <Input
+                  value={buildUpName}
+                  onChange={(e) => setBuildUpName(e.target.value)}
+                  className="w-[300px] bg-white text-lg font-medium"
+                />
+              ) : (
+                <h1 className="text-xl font-semibold">{buildUpName}</h1>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {isEditing ? (
@@ -538,7 +561,7 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
                   onClick={handleSave}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Update
+                  Save
                 </Button>
               ) : (
                 <>
@@ -608,6 +631,18 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing }: BuildU
                   <label className="text-sm text-muted-foreground">Build-up Area:</label>
                 </div>
                 <div className="text-sm">1 sq. m (Standard)</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-32">
+                  <label className="text-sm text-muted-foreground">Product stage carbon:</label>
+                </div>
+                <div className="text-sm">{carbonValues.productStageCarbon} kgCO2e</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-32">
+                  <label className="text-sm text-muted-foreground">Biogenic carbon:</label>
+                </div>
+                <div className="text-sm">{carbonValues.biogenicCarbon} kgCO2e</div>
               </div>
             </div>
 

@@ -3,6 +3,7 @@
 import { BuildUpItem } from "../types"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useState } from "react"
+import { materials } from "@/lib/database"
 
 interface BuildUpChartProps {
   items: BuildUpItem[]
@@ -10,23 +11,45 @@ interface BuildUpChartProps {
 }
 
 export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
-  // Calculate totals
-  const totalA1A3ExcBiogenic = items.reduce((sum, item) => sum + item.a1a3ExcBiogenic, 0)
-  const totalA1A3Biogenic = items.reduce((sum, item) => sum + item.a1a3Biogenic, 0)
+  // Calculate product stage carbon and biogenic carbon
+  const calculateValues = () => {
+    let totalProductStageCarbon = 0;
+    let totalBiogenicCarbon = 0;
+    let toggledProductStageCarbon = 0;
+    let toggledBiogenicCarbon = 0;
 
-  // Calculate toggled totals
-  const toggledA1A3ExcBiogenic = items
-    .filter(item => toggledItems.has(item.id))
-    .reduce((sum, item) => sum + item.a1a3ExcBiogenic, 0)
-  const toggledA1A3Biogenic = items
-    .filter(item => toggledItems.has(item.id))
-    .reduce((sum, item) => sum + item.a1a3Biogenic, 0)
+    items.forEach(item => {
+      const material = materials.find(m => m.iceDbName === item.material);
+      if (material) {
+        const mass = (material.density * (item.thickness / 1000)); // Result in kg/m²
+        const productStageCarbon = mass * (item.a1a3IncBiogenic - item.a1a3Biogenic); // Result in kgCO2e/m²
+        const biogenicCarbon = mass * item.a1a3Biogenic; // Result in kgCO2e/m²
+
+        totalProductStageCarbon += productStageCarbon;
+        totalBiogenicCarbon += biogenicCarbon;
+
+        if (toggledItems.has(item.id)) {
+          toggledProductStageCarbon += productStageCarbon;
+          toggledBiogenicCarbon += biogenicCarbon;
+        }
+      }
+    });
+
+    return {
+      totalProductStageCarbon,
+      totalBiogenicCarbon,
+      toggledProductStageCarbon,
+      toggledBiogenicCarbon
+    };
+  };
+
+  const values = calculateValues();
 
   // Calculate percentages
-  const toggledExcBiogenicPercentage = Math.abs(totalA1A3ExcBiogenic) ? 
-    (Math.abs(toggledA1A3ExcBiogenic) / Math.abs(totalA1A3ExcBiogenic)) * 100 : 0
-  const toggledBiogenicPercentage = Math.abs(totalA1A3Biogenic) ? 
-    (Math.abs(toggledA1A3Biogenic) / Math.abs(totalA1A3Biogenic)) * 100 : 0
+  const toggledProductStagePercentage = Math.abs(values.totalProductStageCarbon) ? 
+    (Math.abs(values.toggledProductStageCarbon) / Math.abs(values.totalProductStageCarbon)) * 100 : 0;
+  const toggledBiogenicPercentage = Math.abs(values.totalBiogenicCarbon) ? 
+    (Math.abs(values.toggledBiogenicCarbon) / Math.abs(values.totalBiogenicCarbon)) * 100 : 0;
 
   // Constants for visualization
   const barWidth = 60 // pixels
@@ -34,13 +57,13 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
   const centerLineY = maxBarHeight / 2
   
   // Helper function to calculate bar height and position
-  const getBarStyles = (value: number, percentage: number, isExcBiogenic: boolean, isHovered: boolean = false) => {
+  const getBarStyles = (value: number, percentage: number, isProductStage: boolean, isHovered: boolean = false) => {
     // Find the maximum absolute value among all values for scaling
     const allValues = [
-      totalA1A3ExcBiogenic,
-      totalA1A3Biogenic,
-      ...items.map(item => item.a1a3ExcBiogenic),
-      ...items.map(item => item.a1a3Biogenic)
+      values.totalProductStageCarbon,
+      values.totalBiogenicCarbon,
+      values.toggledProductStageCarbon,
+      values.toggledBiogenicCarbon
     ]
     const maxAbsValue = Math.max(...allValues.map(Math.abs))
     
@@ -50,7 +73,7 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
     const isNegative = value < 0
 
     // Define color pairs (base and toggled) for each type
-    const excBiogenicColors = {
+    const productStageColors = {
       base: isHovered ? '#64748b' : '#94a3b8', // Darker on hover
       toggled: isHovered ? '#1e293b' : '#334155' // Darker on hover
     }
@@ -59,7 +82,7 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
       toggled: isHovered ? '#14532d' : '#166534' // Darker on hover
     }
     
-    const colors = isExcBiogenic ? excBiogenicColors : biogenicColors
+    const colors = isProductStage ? productStageColors : biogenicColors
     
     return {
       bar: {
@@ -70,9 +93,9 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
         width: `${barWidth}px`,
         position: 'absolute' as const,
         backgroundColor: colors.base,
-        opacity: 0.3,
+        opacity: isHovered ? 0.5 : 0.3,
         border: '1px solid #94a3b8',
-        transition: 'background-color 0.2s'
+        transition: 'all 0.2s'
       },
       highlight: {
         height: `${(height * percentage) / 100}px`,
@@ -82,45 +105,45 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
         width: '100%',
         position: 'absolute' as const,
         backgroundColor: colors.toggled,
-        opacity: 1,
-        transition: 'background-color 0.2s'
+        opacity: isHovered ? 1 : 0.8,
+        transition: 'all 0.2s'
       }
     }
   }
 
-  const [hoveredBar, setHoveredBar] = useState<'exc' | 'bio' | null>(null)
-  const excBiogenicStyles = getBarStyles(totalA1A3ExcBiogenic, toggledExcBiogenicPercentage, true, hoveredBar === 'exc')
-  const biogenicStyles = getBarStyles(totalA1A3Biogenic, toggledBiogenicPercentage, false, hoveredBar === 'bio')
+  const [hoveredBar, setHoveredBar] = useState<'product' | 'bio' | null>(null)
+  const productStageStyles = getBarStyles(values.totalProductStageCarbon, toggledProductStagePercentage, true, hoveredBar === 'product')
+  const biogenicStyles = getBarStyles(values.totalBiogenicCarbon, toggledBiogenicPercentage, false, hoveredBar === 'bio')
 
   return (
     <div className="flex flex-col items-start gap-2 w-full">
-      <div className="relative" style={{ height: `${maxBarHeight}px`, width: `${barWidth * 3}px` }}>
+      <div className="relative" style={{ height: `${maxBarHeight}px`, width: `${barWidth}px` }}>
         {/* Center line */}
         <div 
           className="absolute w-full border-t border-gray-300"
           style={{ top: `${centerLineY}px` }}
         />
 
-        {/* Exc Biogenic Bar */}
+        {/* Product Stage Carbon Bar */}
         <div className="absolute" style={{ left: 0, width: `${barWidth}px`, height: '100%' }}>
-          <div style={excBiogenicStyles.bar}>
-            {toggledItems.size > 0 && <div style={excBiogenicStyles.highlight} />}
+          <div style={productStageStyles.bar}>
+            {toggledItems.size > 0 && <div style={productStageStyles.highlight} />}
           </div>
           {/* Hover area for top half */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div 
-                  className="absolute top-0 w-full cursor-help"
+                  className="absolute top-0 w-full cursor-help z-10"
                   style={{ height: '50%' }}
-                  onMouseEnter={() => setHoveredBar('exc')}
+                  onMouseEnter={() => setHoveredBar('product')}
                   onMouseLeave={() => setHoveredBar(null)}
                 />
               </TooltipTrigger>
               <TooltipContent side="right" className="flex flex-col gap-2">
-                <p className="font-medium">A1-A3, excluding biogenic</p>
+                <p className="font-medium">Product stage carbon</p>
                 <p className="text-sm text-muted-foreground">
-                  {totalA1A3ExcBiogenic.toFixed(3)} kgCO2e/kg
+                  {values.totalProductStageCarbon.toFixed(3)} kgCO2e/m²
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -129,20 +152,20 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
             <div 
               className="absolute text-sm font-medium"
               style={{ 
-                top: '50%',
+                top: '25%',
                 transform: 'translateY(-50%)',
                 right: `${barWidth + 8}px`,
                 color: '#334155',
                 whiteSpace: 'nowrap'
               }}
             >
-              {Math.round(toggledExcBiogenicPercentage)}%
+              {Math.round(toggledProductStagePercentage)}%
             </div>
           )}
         </div>
 
-        {/* Biogenic Bar */}
-        <div className="absolute" style={{ left: `${barWidth * 2}px`, width: `${barWidth}px`, height: '100%' }}>
+        {/* Biogenic Carbon Bar */}
+        <div className="absolute" style={{ left: 0, width: `${barWidth}px`, height: '100%' }}>
           <div style={biogenicStyles.bar}>
             {toggledItems.size > 0 && <div style={biogenicStyles.highlight} />}
           </div>
@@ -151,16 +174,16 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div 
-                  className="absolute bottom-0 w-full cursor-help"
+                  className="absolute bottom-0 w-full cursor-help z-10"
                   style={{ height: '50%' }}
                   onMouseEnter={() => setHoveredBar('bio')}
                   onMouseLeave={() => setHoveredBar(null)}
                 />
               </TooltipTrigger>
-              <TooltipContent side="left" className="flex flex-col gap-2">
-                <p className="font-medium">A1-A3, biogenic</p>
+              <TooltipContent side="right" className="flex flex-col gap-2">
+                <p className="font-medium">Biogenic carbon</p>
                 <p className="text-sm text-muted-foreground">
-                  {totalA1A3Biogenic.toFixed(3)} kgCO2e/kg
+                  {values.totalBiogenicCarbon.toFixed(3)} kgCO2e/m²
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -169,7 +192,7 @@ export function BuildUpChart({ items, toggledItems }: BuildUpChartProps) {
             <div 
               className="absolute text-sm font-medium"
               style={{ 
-                top: '50%',
+                top: '75%',
                 transform: 'translateY(-50%)',
                 left: `${barWidth + 8}px`,
                 color: '#166534',
