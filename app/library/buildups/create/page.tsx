@@ -16,11 +16,41 @@ export default function Page() {
     router.push("/library/buildups")
   }
 
+  const getUniqueNameWithSuffix = (baseName: string, existingBuildUps: SavedBuildUp[]): string => {
+    // If no build-up with this name exists, return the base name
+    if (!existingBuildUps.some(buildUp => buildUp.name === baseName)) {
+      return baseName
+    }
+
+    // Find all build-ups that start with the base name and have a number suffix
+    const regex = new RegExp(`^${baseName}\\s*\\((\\d+)\\)$`)
+    const suffixNumbers = existingBuildUps
+      .map(buildUp => {
+        const match = buildUp.name.match(regex)
+        return match ? parseInt(match[1]) : 0
+      })
+      .filter(num => num > 0)
+
+    // If no numbered suffixes exist, use (2)
+    if (suffixNumbers.length === 0) {
+      return `${baseName} (2)`
+    }
+
+    // Find the highest number and add 1
+    const nextNumber = Math.max(...suffixNumbers) + 1
+    return `${baseName} (${nextNumber})`
+  }
+
   const handleModalSubmit = (name: string) => {
-    // Create a new build-up with the entered name
+    const existingBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
+    
+    // Get a unique name with suffix if needed
+    const uniqueName = getUniqueNameWithSuffix(name, existingBuildUps)
+
+    // Create a new build-up with the unique name
     const newBuildUp: SavedBuildUp = {
       id: Math.random().toString(),
-      name: name,
+      name: uniqueName,
       totalThickness: 0,
       totalMass: 0,
       totalA1A3IncBiogenic: 0,
@@ -29,10 +59,9 @@ export default function Page() {
     }
 
     // Save to localStorage
-    const existingBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
     localStorage.setItem('buildUps', JSON.stringify([...existingBuildUps, newBuildUp]))
 
-    setBuildUpName(name)
+    setBuildUpName(uniqueName)
     setShowModal(false)
     
     // Navigate to the new build-up with edit mode
