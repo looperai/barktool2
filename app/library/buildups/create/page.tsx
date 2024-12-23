@@ -34,7 +34,7 @@ export default function Page() {
 
     // Create a new build-up with the unique name and empty data
     const newBuildUp: SavedBuildUp = {
-      id: Math.random().toString(),
+      id: "", // Set empty ID to indicate this is a new build-up
       name: uniqueName,
       totalThickness: 0,
       totalMass: 0,
@@ -44,17 +44,14 @@ export default function Page() {
       nrmElements: []
     }
 
-    // Save to localStorage
-    localStorage.setItem('buildUps', JSON.stringify([...existingBuildUps, newBuildUp]))
-
     setBuildUpName(uniqueName)
     setInitialBuildUp(newBuildUp)
     setShowModal(false)
   }
 
   const handleSave = (savedBuildUp: SavedBuildUp) => {
-    // Update the initial build-up state
-    setInitialBuildUp(savedBuildUp)
+    // Navigate to the saved build-up in view mode
+    router.push(`/library/buildups?id=${savedBuildUp.id}`)
   }
 
   if (showModal) {

@@ -143,8 +143,8 @@ export function DetailPanel() {
         // Select the first build-up
         router.push(`/library/buildups?id=${savedBuildUps[0].id}`)
       } else {
-        // No build-ups exist, go to create mode
-        router.push('/library/buildups/create')
+        // Just navigate to buildups page without going into create mode
+        router.push('/library/buildups')
       }
     } else {
       router.push('/library/materials')

@@ -44,6 +44,39 @@ interface ContextMenuPosition {
   rowId: string | null;
 }
 
+function WelcomeMessage() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+      <div className="max-w-md space-y-6">
+        <div className="p-6 rounded-lg bg-accent/20 border-2 border-dashed border-accent">
+          <h2 className="text-2xl font-semibold mb-4">Welcome to Build-ups</h2>
+          <p className="text-muted-foreground mb-6">
+            Create your first build-up to start tracking materials, thicknesses, and carbon values for your construction elements.
+          </p>
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => window.location.href = '/library/buildups/create'}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create your first build-up
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-4 text-sm text-muted-foreground">
+          <p>With build-ups, you can:</p>
+          <ul className="list-disc list-inside space-y-2">
+            <li>Define material layers and their thicknesses</li>
+            <li>Track carbon values and environmental impact</li>
+            <li>Associate elements with NRM codes</li>
+            <li>Compare different build-up configurations</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialName, onSave }: BuildUpFormProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -277,10 +310,8 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
       })
       window.dispatchEvent(event)
 
-      // Navigate to view mode with the saved data
-      const url = `/library/buildups?id=${newBuildUpId}&t=${Date.now()}`
-      window.history.replaceState({}, '', url)
-      router.refresh()
+      // Let the parent component handle navigation
+      // Remove the URL update and router refresh from here
     } catch (error) {
       console.error('Error saving build-up:', error)
       alert('There was an error saving the build-up. Please try again.')
@@ -478,6 +509,12 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
     }
   }
 
+  // Add this check at the start of the render
+  const existingBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
+  if (!isEditing && existingBuildUps.length === 0) {
+    return <WelcomeMessage />
+  }
+
   return (
     <div className="h-full flex flex-col p-6">
       <style>
@@ -606,7 +643,7 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
                   onClick={handleSave}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Save
+                  {(!initialData?.id || initialData.id === "") ? "Create" : "Save"}
                 </Button>
               ) : (
                 <>
@@ -714,13 +751,13 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
                 <div className="w-32">
                   <label className="text-sm text-muted-foreground">Product stage carbon:</label>
                 </div>
-                <div className="text-sm">{carbonValues.productStageCarbon} kgCO2e</div>
+                <div className="text-sm">{carbonValues.productStageCarbon} kgCO2e/m2</div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-32">
                   <label className="text-sm text-muted-foreground">Biogenic carbon:</label>
                 </div>
-                <div className="text-sm">{carbonValues.biogenicCarbon} kgCO2e</div>
+                <div className="text-sm">{carbonValues.biogenicCarbon} kgCO2e/m2</div>
               </div>
             </div>
 
