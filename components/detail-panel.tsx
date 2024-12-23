@@ -24,6 +24,16 @@ import {
 } from "@/components/ui/tooltip"
 import { SavedBuildUp } from "@/app/library/buildups/types"
 import { ErrorBoundary } from './error-boundary'
+import { nrmData } from "@/lib/nrm-data"
+import { cn } from "@/lib/utils"
+
+type NRMNode = {
+  name: string;
+  buildUps: Set<SavedBuildUp>;
+  children: { [key: string]: NRMNode };
+  path: string;
+  totalBuildUps: number;
+};
 
 export function DetailPanel() {
   const pathname = usePathname()
@@ -88,6 +98,17 @@ export function DetailPanel() {
       router.push(`/library/buildups?id=${firstBuildUp.id}`)
     } else {
       setSelectedBuildUpId(urlId || null)
+    }
+
+    // Add event listener for build-up saves
+    const handleBuildUpSaved = (event: CustomEvent<{ buildUps: SavedBuildUp[] }>) => {
+      setBuildUps(event.detail.buildUps)
+    }
+
+    window.addEventListener('buildUpSaved', handleBuildUpSaved as EventListener)
+
+    return () => {
+      window.removeEventListener('buildUpSaved', handleBuildUpSaved as EventListener)
     }
   }, [mounted, searchParams, pathname, router])
 
@@ -155,7 +176,12 @@ export function DetailPanel() {
 
     // If the deleted build-up was selected, clear selection
     if (buildUp.id === selectedBuildUpId) {
-      router.push('/library/buildups')
+      if (updatedBuildUps.length > 0) {
+        // Select the first available build-up
+        router.push(`/library/buildups?id=${updatedBuildUps[0].id}`)
+      } else {
+        router.push('/library/buildups')
+      }
     }
   }
 
@@ -167,11 +193,13 @@ export function DetailPanel() {
   const handleDuplicateBuildUp = (buildUp: SavedBuildUp) => {
     if (!mounted) return
 
-    // Create a new build-up with copied data
+    // Create a new build-up with copied data, including NRM elements
     const newBuildUp: SavedBuildUp = {
       ...buildUp,
       id: Math.random().toString(),
       name: `Copy of ${buildUp.name}`,
+      nrmElements: buildUp.nrmElements || [], // Ensure NRM elements are copied
+      items: buildUp.items.map(item => ({ ...item, id: Math.random().toString() })) // Create new IDs for items
     }
 
     // Add to localStorage
@@ -192,6 +220,306 @@ export function DetailPanel() {
   const formatNumber = (value: number) => {
     if (value === 0) return "0 kgCO2e/kg"
     return `${value.toFixed(4)} kgCO2e/kg`
+  }
+
+  const createNRMTree = () => {
+    // Create the NRM hierarchy first
+    const createNode = (obj: any, parentPath = ""): { [key: string]: NRMNode } => {
+      const result: { [key: string]: NRMNode } = {};
+      // Get keys and sort them to maintain order
+      const keys = Object.keys(obj).sort((a, b) => {
+        // Extract numbers from the start of the strings
+        const aNum = parseFloat(a.split(" ")[0]);
+        const bNum = parseFloat(b.split(" ")[0]);
+        return aNum - bNum;
+      });
+      
+      keys.forEach(key => {
+        const currentPath = parentPath ? `${parentPath} - ${key}` : key;
+        result[key] = {
+          name: key,
+          buildUps: new Set(),
+          children: createNode(obj[key], currentPath),
+          path: currentPath,
+          totalBuildUps: 0
+        };
+      });
+      return result;
+    };
+
+    // Initialize tree with NRM structure
+    const tree: { [key: string]: NRMNode } = createNode(nrmData);
+
+    // Add "Uncategorized" at the end
+    tree["Uncategorized"] = {
+      name: "Uncategorized",
+      buildUps: new Set(),
+      children: {},
+      path: "Uncategorized",
+      totalBuildUps: 0
+    };
+
+    // Add build-ups to their respective nodes
+    filteredBuildUps.forEach(buildUp => {
+      if (!buildUp.nrmElements || buildUp.nrmElements.length === 0) {
+        tree["Uncategorized"].buildUps.add(buildUp);
+        tree["Uncategorized"].totalBuildUps++;
+        return;
+      }
+
+      buildUp.nrmElements.forEach(element => {
+        // Extract the NRM code from the element
+        const nrmCode = element.match(/^(\d+(\.\d+)*)/)?.[0];
+        
+        if (!nrmCode) {
+          tree["Uncategorized"].buildUps.add(buildUp);
+          tree["Uncategorized"].totalBuildUps++;
+          return;
+        }
+
+        // Find the exact matching node in the tree
+        let current = tree;
+        let targetNode = null;
+        const parts = nrmCode.split('.');
+        let currentCode = '';
+        let parentNodes: NRMNode[] = [];
+
+        // First, traverse the tree to find the exact matching node
+        for (let i = 0; i < parts.length; i++) {
+          if (i > 0) currentCode += '.';
+          currentCode += parts[i];
+
+          const matchingKey = Object.keys(current).find(key => {
+            const keyCode = key.match(/^(\d+(\.\d+)*)/)?.[0];
+            return keyCode === currentCode;
+          });
+
+          if (matchingKey) {
+            if (i === parts.length - 1) {
+              // This is the exact matching node
+              targetNode = current[matchingKey];
+            } else {
+              // Add parent nodes to array for updating counts later
+              parentNodes.push(current[matchingKey]);
+            }
+            current = current[matchingKey].children;
+          } else {
+            // If no matching node found at any level, add to Uncategorized
+            targetNode = tree["Uncategorized"];
+            parentNodes = [];
+            break;
+          }
+        }
+
+        // Add the build-up only to the exact matching node
+        if (targetNode) {
+          targetNode.buildUps.add(buildUp);
+          targetNode.totalBuildUps++;
+          // Update parent node counts
+          parentNodes.forEach(node => {
+            node.totalBuildUps++;
+          });
+        } else {
+          tree["Uncategorized"].buildUps.add(buildUp);
+          tree["Uncategorized"].totalBuildUps++;
+        }
+      });
+    });
+
+    return tree;
+  };
+
+  const renderNRMNode = (node: NRMNode, level = 0) => {
+    const hasChildren = Object.keys(node.children).length > 0;
+    const isExpanded = expandedGroups.has(node.path);
+    const buildUpsArray = Array.from(node.buildUps);
+
+    // Show all nodes except empty Uncategorized
+    if (node.name === "Uncategorized" && node.totalBuildUps === 0) return null;
+
+    return (
+      <div key={node.path} className={cn("space-y-1", level > 0 && "ml-4")}>
+        <div
+          className={cn(
+            "rounded-lg border bg-card p-3 text-card-foreground hover:bg-accent/50 transition-colors cursor-pointer flex justify-between items-center",
+            node.totalBuildUps > 0 && "border-primary/20"
+          )}
+          onClick={() => toggleGroup(node.path)}
+        >
+          <div className="text-sm font-medium">
+            {node.name} {node.totalBuildUps > 0 && `(${node.totalBuildUps})`}
+          </div>
+          {(hasChildren || buildUpsArray.length > 0) && (
+            <div className="text-sm text-muted-foreground">
+              {isExpanded ? '▼' : '▶'}
+            </div>
+          )}
+        </div>
+
+        {isExpanded && (
+          <div className="space-y-1">
+            {/* Render build-ups first if this is a leaf node */}
+            {!hasChildren && buildUpsArray.length > 0 && (
+              <div className="space-y-1">
+                {buildUpsArray.map((buildUp) => (
+                  <div
+                    key={buildUp.id}
+                    className={`group rounded-lg border bg-card text-card-foreground cursor-pointer transition-all relative
+                      ${buildUp.id === selectedBuildUpId 
+                        ? 'bg-accent/70 border-accent-foreground/20 shadow-[0_2px_10px] shadow-accent/50 ring-1 ring-accent-foreground/20' 
+                        : 'hover:bg-accent/50'
+                      }
+                      p-3 ml-4
+                    `}
+                    onClick={() => handleSelectBuildUp(buildUp)}
+                  >
+                    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDuplicateBuildUp(buildUp)
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Duplicate</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setBuildUpToDelete(buildUp)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="text-sm font-medium">
+                      {buildUp.name}
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <div>Total Thickness: {buildUp.totalThickness} mm</div>
+                      <div>Total Mass: {buildUp.totalMass.toFixed(2)} kg</div>
+                      <div>Total A1-A3 inc bio: {buildUp.totalA1A3IncBiogenic.toFixed(2)} kgCO2e</div>
+                      <div>Total A1-A3 bio: {buildUp.totalA1A3Biogenic.toFixed(2)} kgCO2e</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Render children nodes */}
+            {Object.entries(node.children)
+              .sort(([a], [b]) => {
+                // Extract numbers from the start of the strings for proper sorting
+                const aMatch = a.match(/^(\d+(\.\d+)*)/);
+                const bMatch = b.match(/^(\d+(\.\d+)*)/);
+                if (aMatch && bMatch) {
+                  const aParts = aMatch[0].split('.').map(Number);
+                  const bParts = bMatch[0].split('.').map(Number);
+                  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                    const aNum = aParts[i] || 0;
+                    const bNum = bParts[i] || 0;
+                    if (aNum !== bNum) return aNum - bNum;
+                  }
+                }
+                return a.localeCompare(b);
+              })
+              .map(([_, childNode]) => renderNRMNode(childNode, level + 1))}
+
+            {/* Render build-ups after children if this is not a leaf node */}
+            {hasChildren && buildUpsArray.length > 0 && (
+              <div className="space-y-1">
+                {buildUpsArray.map((buildUp) => (
+                  <div
+                    key={buildUp.id}
+                    className={`group rounded-lg border bg-card text-card-foreground cursor-pointer transition-all relative
+                      ${buildUp.id === selectedBuildUpId 
+                        ? 'bg-accent/70 border-accent-foreground/20 shadow-[0_2px_10px] shadow-accent/50 ring-1 ring-accent-foreground/20' 
+                        : 'hover:bg-accent/50'
+                      }
+                      p-3 ml-4
+                    `}
+                    onClick={() => handleSelectBuildUp(buildUp)}
+                  >
+                    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDuplicateBuildUp(buildUp)
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Duplicate</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setBuildUpToDelete(buildUp)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="text-sm font-medium">
+                      {buildUp.name}
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <div>Total Thickness: {buildUp.totalThickness} mm</div>
+                      <div>Total Mass: {buildUp.totalMass.toFixed(2)} kg</div>
+                      <div>Total A1-A3 inc bio: {buildUp.totalA1A3IncBiogenic.toFixed(2)} kgCO2e</div>
+                      <div>Total A1-A3 bio: {buildUp.totalA1A3Biogenic.toFixed(2)} kgCO2e</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -357,70 +685,9 @@ export function DetailPanel() {
                     </Button>
 
                     <div className="space-y-2">
-                      {filteredBuildUps.map((buildUp) => (
-                        <div
-                          key={buildUp.id}
-                          className={`group rounded-lg border bg-card text-card-foreground cursor-pointer transition-all relative
-                            ${buildUp.id === selectedBuildUpId 
-                              ? 'bg-accent/70 border-accent-foreground/20 shadow-[0_2px_10px] shadow-accent/50 ring-1 ring-accent-foreground/20' 
-                              : 'hover:bg-accent/50'
-                            }
-                            p-3
-                          `}
-                          onClick={() => handleSelectBuildUp(buildUp)}
-                        >
-                          <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDuplicateBuildUp(buildUp)
-                                    }}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Duplicate</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setBuildUpToDelete(buildUp)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Delete</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <div className="text-sm font-medium">
-                            {buildUp.name}
-                          </div>
-                          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                            <div>Total Thickness: {buildUp.totalThickness} mm</div>
-                            <div>Total Mass: {buildUp.totalMass.toFixed(2)} kg</div>
-                            <div>Total A1-A3 inc bio: {buildUp.totalA1A3IncBiogenic.toFixed(2)} kgCO2e</div>
-                            <div>Total A1-A3 bio: {buildUp.totalA1A3Biogenic.toFixed(2)} kgCO2e</div>
-                          </div>
-                        </div>
-                      ))}
+                      {Object.entries(createNRMTree())
+                        .sort(([a], [b]) => a === "Uncategorized" ? 1 : b === "Uncategorized" ? -1 : a.localeCompare(b))
+                        .map(([_, node]) => renderNRMNode(node))}
                     </div>
                   </div>
                 </div>

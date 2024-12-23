@@ -13,18 +13,25 @@ export default function BuildUpsPage() {
   const shouldStartEditing = searchParams.get('edit') === 'true'
   const [mounted, setMounted] = useState(false)
   const [selectedBuildUp, setSelectedBuildUp] = useState<SavedBuildUp | null>(null)
+  const [buildUps, setBuildUps] = useState<SavedBuildUp[]>([])
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Separate effect for handling build-up selection
+  // Load all build-ups
   useEffect(() => {
     if (!mounted) return
-
     const savedBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
+    setBuildUps(savedBuildUps)
+  }, [mounted])
+
+  // Handle build-up selection
+  useEffect(() => {
+    if (!mounted || !buildUps.length) return
+
     if (!isCreating && buildUpId) {
-      const buildUp = savedBuildUps.find((b: SavedBuildUp) => b.id === buildUpId)
+      const buildUp = buildUps.find((b: SavedBuildUp) => b.id === buildUpId)
       if (buildUp) {
         setSelectedBuildUp(buildUp)
       } else {
@@ -37,7 +44,21 @@ export default function BuildUpsPage() {
     } else {
       setSelectedBuildUp(null)
     }
-  }, [mounted, buildUpId, isCreating])
+  }, [mounted, buildUpId, isCreating, buildUps])
+
+  const handleSave = (savedBuildUp: SavedBuildUp) => {
+    // Update the buildUps state with the new/updated build-up
+    setBuildUps(prevBuildUps => {
+      const updatedBuildUps = prevBuildUps.map(buildUp =>
+        buildUp.id === savedBuildUp.id ? savedBuildUp : buildUp
+      )
+      if (!prevBuildUps.find(buildUp => buildUp.id === savedBuildUp.id)) {
+        updatedBuildUps.push(savedBuildUp)
+      }
+      return updatedBuildUps
+    })
+    setSelectedBuildUp(savedBuildUp)
+  }
 
   if (!mounted) {
     return null
@@ -49,6 +70,7 @@ export default function BuildUpsPage() {
         key={`${buildUpId || 'new'}-${shouldStartEditing}`}
         initialData={selectedBuildUp}
         isEditing={isCreating || shouldStartEditing}
+        onSave={handleSave}
       />
     </div>
   )

@@ -28,11 +28,14 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { BuildUpChart } from "./build-up-chart"
+import { Badge } from "@/components/ui/badge"
+import { NRMElementsSelect } from "./nrm-elements-select"
 
 interface BuildUpFormProps {
   initialData?: SavedBuildUp | null
   isEditing?: boolean
   initialName?: string
+  onSave?: (buildUp: SavedBuildUp) => void
 }
 
 interface ContextMenuPosition {
@@ -41,7 +44,7 @@ interface ContextMenuPosition {
   rowId: string | null;
 }
 
-export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialName }: BuildUpFormProps) {
+export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialName, onSave }: BuildUpFormProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [buildUpName, setBuildUpName] = useState("")
@@ -56,10 +59,13 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedNRMElements, setSelectedNRMElements] = useState<string[]>(initialData?.nrmElements || [])
 
   useEffect(() => {
     setMounted(true)
     setBuildUpName(initialName || initialData?.name || "")
+    // Initialize NRM elements from initialData
+    setSelectedNRMElements(initialData?.nrmElements || [])
   }, [initialName, initialData])
 
   useEffect(() => {
@@ -86,6 +92,7 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
     // Log values when build-up changes
     if (initialData?.items) {
       console.group('Build-up Values:', initialData.name);
+      console.log('NRM Elements:', initialData.nrmElements);
       
       // Log individual rows
       updatedItems.forEach((item, index) => {
@@ -155,15 +162,16 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Add effect to track changes
+  // Add effect to track changes to include NRM elements
   useEffect(() => {
     if (!initialData) return;
 
     const hasNameChanged = buildUpName !== initialData.name;
     const hasItemsChanged = JSON.stringify(buildUpItems) !== JSON.stringify(initialData.items);
+    const hasNRMElementsChanged = JSON.stringify(selectedNRMElements) !== JSON.stringify(initialData.nrmElements || []);
     
-    setHasChanges(hasNameChanged || hasItemsChanged);
-  }, [buildUpName, buildUpItems, initialData]);
+    setHasChanges(hasNameChanged || hasItemsChanged || hasNRMElementsChanged);
+  }, [buildUpName, buildUpItems, selectedNRMElements, initialData]);
 
   // Reset hasChanges when entering/exiting edit mode
   useEffect(() => {
@@ -198,7 +206,7 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
     return null
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!buildUpName) {
       alert("Please enter a build-up name")
       return
@@ -209,39 +217,74 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
       return
     }
 
-    // Calculate totals
-    const totalThickness = buildUpItems.reduce((sum, item) => sum + item.thickness, 0)
-    const totalMass = buildUpItems.reduce((sum, item) => sum + item.mass, 0)
-    const totalA1A3IncBiogenic = buildUpItems.reduce((sum, item) => sum + item.a1a3IncBiogenic, 0)
-    const totalA1A3Biogenic = buildUpItems.reduce((sum, item) => sum + item.a1a3Biogenic, 0)
+    try {
+      // Calculate totals
+      const totalThickness = buildUpItems.reduce((sum, item) => sum + (item.thickness || 0), 0)
+      const totalMass = buildUpItems.reduce((sum, item) => sum + (item.mass || 0), 0)
+      const totalA1A3IncBiogenic = buildUpItems.reduce((sum, item) => sum + (item.a1a3IncBiogenic || 0), 0)
+      const totalA1A3Biogenic = buildUpItems.reduce((sum, item) => sum + (item.a1a3Biogenic || 0), 0)
 
-    const newBuildUpId = initialData?.id || Math.random().toString()
-    const savedBuildUp: SavedBuildUp = {
-      id: newBuildUpId,
-      name: buildUpName,
-      totalThickness,
-      totalMass,
-      totalA1A3IncBiogenic,
-      totalA1A3Biogenic,
-      items: buildUpItems
-    }
+      const newBuildUpId = initialData?.id || Math.random().toString()
+      const savedBuildUp: SavedBuildUp = {
+        id: newBuildUpId,
+        name: buildUpName,
+        totalThickness,
+        totalMass,
+        totalA1A3IncBiogenic,
+        totalA1A3Biogenic,
+        items: buildUpItems.map(item => ({
+          ...item,
+          id: item.id || Math.random().toString(),
+          thickness: item.thickness || 0,
+          mass: item.mass || 0,
+          a1a3IncBiogenic: item.a1a3IncBiogenic || 0,
+          a1a3Biogenic: item.a1a3Biogenic || 0,
+          a1a3ExcBiogenic: item.a1a3ExcBiogenic || 0
+        })),
+        nrmElements: selectedNRMElements
+      }
 
-    // Get existing build-ups from localStorage
-    const existingBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
-    
-    if (initialData?.id) {
-      // Update existing build-up
-      const updatedBuildUps = existingBuildUps.map((buildUp: SavedBuildUp) => 
-        buildUp.id === savedBuildUp.id ? savedBuildUp : buildUp
-      )
+      // Get existing build-ups from localStorage
+      const existingBuildUps = JSON.parse(localStorage.getItem('buildUps') || '[]')
+      let updatedBuildUps: SavedBuildUp[];
+      
+      if (initialData?.id) {
+        // Update existing build-up
+        updatedBuildUps = existingBuildUps.map((buildUp: SavedBuildUp) => 
+          buildUp.id === savedBuildUp.id ? savedBuildUp : buildUp
+        )
+      } else {
+        // Add new build-up
+        updatedBuildUps = [...existingBuildUps, savedBuildUp]
+      }
+
+      // Save to localStorage
       localStorage.setItem('buildUps', JSON.stringify(updatedBuildUps))
-    } else {
-      // Add new build-up
-      localStorage.setItem('buildUps', JSON.stringify([...existingBuildUps, savedBuildUp]))
-    }
 
-    setIsEditing(false)
-    router.push(`/library/buildups?id=${newBuildUpId}`)
+      // Update local state to match saved state
+      setBuildUpName(savedBuildUp.name)
+      setBuildUpItems(savedBuildUp.items)
+      setSelectedNRMElements(savedBuildUp.nrmElements || [])
+      setIsEditing(false)
+      setHasChanges(false)
+
+      // Call the onSave callback if provided
+      onSave?.(savedBuildUp)
+
+      // Dispatch a custom event to notify DetailPanel
+      const event = new CustomEvent('buildUpSaved', { 
+        detail: { buildUps: updatedBuildUps }
+      })
+      window.dispatchEvent(event)
+
+      // Navigate to view mode with the saved data
+      const url = `/library/buildups?id=${newBuildUpId}&t=${Date.now()}`
+      window.history.replaceState({}, '', url)
+      router.refresh()
+    } catch (error) {
+      console.error('Error saving build-up:', error)
+      alert('There was an error saving the build-up. Please try again.')
+    }
   }
 
   const handleDelete = () => {
@@ -263,6 +306,8 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
       ...initialData,
       id: Math.random().toString(),
       name: `Copy of ${initialData.name}`,
+      items: initialData.items.map(item => ({ ...item, id: Math.random().toString() })),
+      nrmElements: [...(initialData.nrmElements || [])] // Ensure NRM elements are properly copied
     }
 
     // Add to localStorage
@@ -632,6 +677,39 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
                 </div>
                 <div className="text-sm">1 sq. m (Standard)</div>
               </div>
+
+              <div className="flex gap-2">
+                <div className="w-32">
+                  <label className="text-sm text-muted-foreground">Associated NRM elements:</label>
+                </div>
+                <div className="flex-1">
+                  {isEditing ? (
+                    <NRMElementsSelect
+                      selectedElements={selectedNRMElements}
+                      onChange={setSelectedNRMElements}
+                    />
+                  ) : selectedNRMElements?.length > 0 ? (
+                    <div className="border rounded-md p-2 min-h-[40px] max-h-[80px] overflow-y-auto">
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedNRMElements.map(element => (
+                          <Badge 
+                            key={element} 
+                            variant="secondary"
+                            className="text-xs py-0.5 px-2 shrink-0"
+                          >
+                            {element}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border rounded-md p-2 min-h-[40px]">
+                      <p className="text-sm text-muted-foreground">No NRM elements selected</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
                 <div className="w-32">
                   <label className="text-sm text-muted-foreground">Product stage carbon:</label>
@@ -646,8 +724,10 @@ export function BuildUpForm({ initialData, isEditing: defaultIsEditing, initialN
               </div>
             </div>
 
-            <div className="w-1/2 pt-4">
-              <BuildUpChart items={buildUpItems} toggledItems={toggledItems} />
+            <div className="w-1/2 pt-4 flex justify-center items-start">
+              <div className="ml-12">
+                <BuildUpChart items={buildUpItems} toggledItems={toggledItems} />
+              </div>
             </div>
           </div>
 

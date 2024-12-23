@@ -7,38 +7,23 @@ import { BuildUpNameModal } from "../components/build-up-name-modal"
 import { SavedBuildUp } from "../types"
 
 export default function Page() {
+  const router = useRouter()
   const [showModal, setShowModal] = useState(true)
   const [buildUpName, setBuildUpName] = useState("")
-  const router = useRouter()
+  const [initialBuildUp, setInitialBuildUp] = useState<SavedBuildUp | null>(null)
 
   const handleModalClose = () => {
-    setShowModal(false)
-    router.push("/library/buildups")
+    router.push('/library/buildups')
   }
 
-  const getUniqueNameWithSuffix = (baseName: string, existingBuildUps: SavedBuildUp[]): string => {
-    // If no build-up with this name exists, return the base name
-    if (!existingBuildUps.some(buildUp => buildUp.name === baseName)) {
-      return baseName
+  const getUniqueNameWithSuffix = (baseName: string, existingBuildUps: SavedBuildUp[]) => {
+    let name = baseName
+    let counter = 1
+    while (existingBuildUps.some(buildUp => buildUp.name === name)) {
+      name = `${baseName} (${counter})`
+      counter++
     }
-
-    // Find all build-ups that start with the base name and have a number suffix
-    const regex = new RegExp(`^${baseName}\\s*\\((\\d+)\\)$`)
-    const suffixNumbers = existingBuildUps
-      .map(buildUp => {
-        const match = buildUp.name.match(regex)
-        return match ? parseInt(match[1]) : 0
-      })
-      .filter(num => num > 0)
-
-    // If no numbered suffixes exist, use (2)
-    if (suffixNumbers.length === 0) {
-      return `${baseName} (2)`
-    }
-
-    // Find the highest number and add 1
-    const nextNumber = Math.max(...suffixNumbers) + 1
-    return `${baseName} (${nextNumber})`
+    return name
   }
 
   const handleModalSubmit = (name: string) => {
@@ -47,7 +32,7 @@ export default function Page() {
     // Get a unique name with suffix if needed
     const uniqueName = getUniqueNameWithSuffix(name, existingBuildUps)
 
-    // Create a new build-up with the unique name
+    // Create a new build-up with the unique name and empty data
     const newBuildUp: SavedBuildUp = {
       id: Math.random().toString(),
       name: uniqueName,
@@ -55,25 +40,21 @@ export default function Page() {
       totalMass: 0,
       totalA1A3IncBiogenic: 0,
       totalA1A3Biogenic: 0,
-      items: []
+      items: [],
+      nrmElements: []
     }
 
     // Save to localStorage
     localStorage.setItem('buildUps', JSON.stringify([...existingBuildUps, newBuildUp]))
 
     setBuildUpName(uniqueName)
+    setInitialBuildUp(newBuildUp)
     setShowModal(false)
-    
-    // Navigate to the new build-up with edit mode
-    router.push(`/library/buildups?id=${newBuildUp.id}&edit=true`)
+  }
 
-    // Scroll the detail panel to the bottom after a short delay
-    setTimeout(() => {
-      const detailPanel = document.querySelector('.overflow-y-auto')
-      if (detailPanel) {
-        detailPanel.scrollTop = detailPanel.scrollHeight
-      }
-    }, 100)
+  const handleSave = (savedBuildUp: SavedBuildUp) => {
+    // Update the initial build-up state
+    setInitialBuildUp(savedBuildUp)
   }
 
   if (showModal) {
@@ -86,5 +67,5 @@ export default function Page() {
     )
   }
 
-  return <BuildUpForm isEditing={true} initialName={buildUpName} />
+  return <BuildUpForm isEditing={true} initialData={initialBuildUp} initialName={buildUpName} onSave={handleSave} />
 } 

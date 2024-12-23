@@ -18,4 +18,5 @@ export interface SavedBuildUp {
   totalA1A3IncBiogenic: number;
   totalA1A3Biogenic: number;
   items: BuildUpItem[];
+  nrmElements?: string[];
 } 
